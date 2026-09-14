@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Lock In</string>
+    <string name="widget_daily_goal_name">Lock In™ Daily Goal</string>
+    <string name="widget_daily_goal_description">Displays your Lock In™ daily goal progress and countdown.</string>
+</resources>

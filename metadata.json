@@ -1,0 +1,8 @@
+{
+  "name": "Remix Lock In™",
+  "description": "A premium Gen-Z focus app to block distracting apps and stay locked in.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
