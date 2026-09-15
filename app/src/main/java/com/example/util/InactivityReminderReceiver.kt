@@ -59,25 +59,29 @@ class InactivityReminderReceiver : BroadcastReceiver() {
 
     val elapsedSinceActivity = now - lastActivity
 
-    // Requirement 3: If there has been no meaningful activity for 24 hours (with a small margin)
+    // Requirement 3: If there has been no meaningful activity for 12 hours (with a small margin)
     if (elapsedSinceActivity < InactivityReminderManager.INACTIVITY_INTERVAL_MS - 60_000L) {
-      // User was active less than 24 hours ago; reschedule for 24h after their last activity
+      // User was active less than 12 hours ago; reschedule for 12h after their last activity
       InactivityReminderManager.scheduleNextReminder(
         context,
         lastActivity + InactivityReminderManager.INACTIVITY_INTERVAL_MS
       )
+      // Check for goal completion even if user was active recently
+      checkAndNotifyGoalCompletion(context, prefs)
       return
     }
 
-    // Requirement 4 & 6: If the user remains inactive, allow at most ONE inactivity reminder per 24-hour inactivity period.
+    // Requirement 4 & 6: If the user remains inactive, allow at most ONE inactivity reminder per 12-hour inactivity period.
     // Do NOT repeatedly send the same reminder every few hours.
     val lastReminderSent = prefs.getLastInactivityReminderSentTimestamp()
     if (lastReminderSent > lastActivity && (now - lastReminderSent) < InactivityReminderManager.INACTIVITY_INTERVAL_MS - 60_000L) {
-      // Already sent within the last 24h period of inactivity
+      // Already sent within the last 12h period of inactivity
       InactivityReminderManager.scheduleNextReminder(
         context,
         lastReminderSent + InactivityReminderManager.INACTIVITY_INTERVAL_MS
       )
+      // Check for goal completion
+      checkAndNotifyGoalCompletion(context, prefs)
       return
     }
 
@@ -86,6 +90,8 @@ class InactivityReminderReceiver : BroadcastReceiver() {
     if (daytimeTarget > now + 60_000L) {
       // It's currently nighttime! Postpone until the daytime window
       InactivityReminderManager.scheduleNextReminder(context, daytimeTarget)
+      // Check for goal completion
+      checkAndNotifyGoalCompletion(context, prefs)
       return
     }
 
@@ -108,10 +114,38 @@ class InactivityReminderReceiver : BroadcastReceiver() {
     )
     prefs.appendAppNotification(notifItem)
 
-    // Requirement 6: If the user remains inactive, allow at most ONE inactivity reminder per 24-hour inactivity period.
+    // Check for goal completion
+    checkAndNotifyGoalCompletion(context, prefs)
+
+    // Requirement 6: If the user remains inactive, allow at most ONE inactivity reminder per 12-hour inactivity period.
     InactivityReminderManager.scheduleNextReminder(
       context,
       now + InactivityReminderManager.INACTIVITY_INTERVAL_MS
     )
+  }
+
+  private fun checkAndNotifyGoalCompletion(context: Context, prefs: AppPreferences) {
+    val goal = prefs.getDailyGoal() ?: return
+    if (goal.isCompleted()) {
+      val lastNotified = prefs.getLastNotifiedGoalId()
+      if (lastNotified != goal.id) {
+        val title = "Goal Completed!"
+        val message = "You completed your ${goal.title} goal. Great work!"
+        
+        NotificationHelper.postSystemNotification(context, title, message)
+        
+        // Persist into app notifications
+        val now = System.currentTimeMillis()
+        val notifItem = AppNotificationItem(
+          title = title,
+          message = message,
+          timestamp = now,
+          timestampFormatted = formatRelativeNotificationTime(now, now)
+        )
+        prefs.appendAppNotification(notifItem)
+        
+        prefs.setLastNotifiedGoalId(goal.id)
+      }
+    }
   }
 }

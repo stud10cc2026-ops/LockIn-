@@ -403,6 +403,20 @@ class AppPreferences(private val context: Context) {
     }
   }
 
+  fun getLastNotifiedGoalId(): String? {
+    return globalPrefs.getString("last_notified_goal_id", null)
+  }
+
+  fun setLastNotifiedGoalId(goalId: String?) {
+    try {
+      if (goalId == null) {
+        globalPrefs.edit().remove("last_notified_goal_id").apply()
+      } else {
+        globalPrefs.edit().putString("last_notified_goal_id", goalId).apply()
+      }
+    } catch (_: Exception) {}
+  }
+
   fun saveDailyGoal(goal: DailyGoal?) {
     try {
       val activeUid = getActiveUserId()

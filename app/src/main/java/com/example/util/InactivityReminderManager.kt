@@ -10,22 +10,22 @@ import java.util.Calendar
 
 object InactivityReminderManager {
 
-  const val INACTIVITY_INTERVAL_MS = 24L * 60 * 60 * 1000L // 24 hours
+  const val INACTIVITY_INTERVAL_MS = 12L * 60 * 60 * 1000L // 12 hours
   private const val REQUEST_CODE = 2001
   const val ACTION_INACTIVITY_CHECK = "com.example.action.INACTIVITY_REMINDER"
 
   /**
    * Records a meaningful user activity, resets the inactivity reminder tracker,
-   * and schedules the next inactivity check for 24 hours later (daytime adjusted).
+   * and schedules the next inactivity check for 12 hours later (daytime adjusted).
    */
   fun recordActivityAndReschedule(context: Context) {
     val prefs = AppPreferences(context)
     val now = System.currentTimeMillis()
     prefs.setLastActivityTimestamp(now)
-    // Reset inactivity reminder sent timestamp so a new 24-hour cycle begins
+    // Reset inactivity reminder sent timestamp so a new 12-hour cycle begins
     prefs.setLastInactivityReminderSentTimestamp(0L)
 
-    // Schedule 24 hours from now, adjusted to a reasonable daytime window
+    // Schedule 12 hours from now, adjusted to a reasonable daytime window
     scheduleNextReminder(context, now + INACTIVITY_INTERVAL_MS)
   }
 

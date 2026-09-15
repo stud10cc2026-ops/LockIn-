@@ -170,6 +170,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     )
     _uiState.value = stateWithStats
 
+    // Check for goal completion notification on startup
+    checkAndNotifyGoalCompletion(savedGoal)
+
     if (stateWithStats.isLoggedIn && !stateWithStats.userId.isNullOrEmpty()) {
       syncWithCloudData(stateWithStats.userId, stateWithStats.accessToken)
     }
@@ -182,6 +185,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
   fun resetAppCompletely() {
     resetAppData()
+  }
+
+  private fun checkAndNotifyGoalCompletion(goal: DailyGoal?) {
+    if (goal == null) return
+    if (goal.isCompleted()) {
+      val lastNotified = prefs.getLastNotifiedGoalId()
+      if (lastNotified != goal.id) {
+        val title = "Goal Completed!"
+        val message = "You completed your ${goal.title} goal. Great work!"
+        
+        // Trigger notification (this also appends to appNotifications and saves state)
+        triggerNotification(title, message)
+        
+        prefs.setLastNotifiedGoalId(goal.id)
+      }
+    }
   }
 
   private fun syncWithCloudData(userId: String, idToken: String?) {

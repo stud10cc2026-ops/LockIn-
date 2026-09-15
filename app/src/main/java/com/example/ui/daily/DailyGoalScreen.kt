@@ -426,6 +426,7 @@ private fun GoalActiveSection(
         totalDays = goal.totalDays,
         currentDay = currentDay,
         isCompleted = isCompleted,
+        isNightMode = isNightMode,
         modifier = Modifier
           .fillMaxWidth()
           .padding(vertical = 2.dp)
@@ -620,6 +621,7 @@ fun DailyGoalDotGrid(
   totalDays: Int,
   currentDay: Int,
   isCompleted: Boolean,
+  isNightMode: Boolean,
   modifier: Modifier = Modifier
 ) {
   val cols = when {
@@ -660,8 +662,8 @@ fun DailyGoalDotGrid(
 
       val color = when {
         isCurrent -> SignatureNeonLime
-        isPassed -> Color.White.copy(alpha = 0.95f)
-        else -> Color(0xFF282B33)
+        isPassed -> if (isNightMode) Color.White.copy(alpha = 0.95f) else DarkButtonCharcoal
+        else -> if (isNightMode) Color(0xFF282B33) else Color(0xFFE2E6EC)
       }
 
       drawCircle(

@@ -2201,6 +2201,7 @@ private fun DailyGoalDialog(
               totalDays = totalDays,
               currentDay = currentDay,
               isCompleted = isCompleted,
+              isNightMode = isNightMode,
               modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 2.dp)
