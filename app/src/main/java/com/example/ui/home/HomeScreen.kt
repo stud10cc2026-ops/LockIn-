@@ -276,7 +276,6 @@ fun HomeScreen(
               onOpenAuthScreen = { viewModel.openAuthScreen(it) },
               onLogout = { viewModel.logout() },
               onResetAppData = { viewModel.resetAppData() },
-              onTestWelcomeFlow = { viewModel.testWelcomeFlow() },
               onGenerateDemoData = { viewModel.generateDemoData() },
               onClearDemoData = { viewModel.clearDemoData() }
             )
@@ -1956,7 +1955,7 @@ private fun DailyGoalDialog(
     },
     text = {
       Column(
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
           .fillMaxWidth()
           .verticalScroll(rememberScrollState())
@@ -2169,7 +2168,7 @@ private fun DailyGoalDialog(
           // =========================================================
           // PROGRESS POPUP (When user taps "Show" on Home page)
           // =========================================================
-          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             val currentDay = goal.getCurrentDay()
             val totalDays = goal.totalDays
             val remainingDays = goal.getRemainingDays()
@@ -2206,24 +2205,6 @@ private fun DailyGoalDialog(
                 .fillMaxWidth()
                 .padding(vertical = 2.dp)
             )
-
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Text(
-                text = "Start: ${goal.startDateStr}",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = mutedColor
-              )
-              Text(
-                text = "End: ${goal.endDateStr}",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = mutedColor
-              )
-            }
-            Spacer(modifier = Modifier.height(2.dp))
           }
         }
       }
@@ -2277,13 +2258,37 @@ private fun DailyGoalDialog(
           }
         }
       } else {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp, start = 4.dp, end = 4.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
+          // Start/End Dates moved here to reduce gap with buttons
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(
+              text = "Start: ${goal.startDateStr}",
+              style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+              color = mutedColor
+            )
+            Text(
+              text = "End: ${goal.endDateStr}",
+              style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+              color = mutedColor
+            )
+          }
+
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(bottom = 0.dp, start = 4.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
           // Home screen widget button
           TextButton(
             onClick = {
@@ -2331,6 +2336,7 @@ private fun DailyGoalDialog(
               fontWeight = FontWeight.Bold,
               style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp)
             )
+          }
           }
         }
       }

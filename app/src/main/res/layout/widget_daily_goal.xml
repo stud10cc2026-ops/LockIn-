@@ -2,26 +2,26 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_container"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/bg_widget_daily_goal_dark"
-    android:paddingTop="14dp"
+    android:paddingTop="12dp"
     android:paddingLeft="14dp"
     android:paddingRight="14dp"
-    android:paddingBottom="12dp">
+    android:paddingBottom="10dp">
 
     <!-- Active Goal State -->
     <LinearLayout
         android:id="@+id/widget_active_layout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical">
 
         <!-- Top Row: Lock In (left) | Goal Name (right) -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="2dp">
+            android:layout_marginBottom="1dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -52,11 +52,12 @@
         <ImageView
             android:id="@+id/widget_dot_grid"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:scaleType="fitCenter"
             android:adjustViewBounds="true"
             android:contentDescription="@string/widget_daily_goal_name"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="1dp"
             android:layout_marginBottom="0dp" />
 
         <!-- Bottom Row: Day on left, remaining days on right -->
@@ -94,7 +95,7 @@
     <LinearLayout
         android:id="@+id/widget_empty_layout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center"
         android:padding="20dp"

@@ -118,7 +118,6 @@ fun SettingsContent(
   onOpenAuthScreen: (String) -> Unit = {},
   onLogout: () -> Unit = {},
   onResetAppData: () -> Unit,
-  onTestWelcomeFlow: () -> Unit = {},
   onGenerateDemoData: () -> Unit = {},
   onClearDemoData: () -> Unit = {},
   onNavigateBack: () -> Unit = {},
@@ -385,25 +384,6 @@ fun SettingsContent(
             chevronTint = chevronTint,
             testTag = "reset_app_data_button",
             onClick = { showResetConfirmation = true }
-          )
-
-          HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            thickness = 0.8.dp,
-            color = dividerColor
-          )
-
-          // Test Welcome Flow
-          SettingsRowItem(
-            icon = Icons.Outlined.Build,
-            title = "Preview Onboarding",
-            subtitle = "Test first-launch flow & permissions",
-            iconTint = iconTint,
-            primaryText = primaryText,
-            secondaryText = secondaryText,
-            chevronTint = chevronTint,
-            testTag = "test_welcome_flow_button",
-            onClick = onTestWelcomeFlow
           )
         }
       }

@@ -184,15 +184,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     resetAppData()
   }
 
-  fun testWelcomeFlow() {
-    _uiState.update { it.copy(showWelcomeIntro = true) }
-    // Optionally reset permission request flag so dialog appears if system allows
-    try {
-      val globalPrefs = getApplication<Application>().getSharedPreferences("lockin_global_prefs", Context.MODE_PRIVATE)
-      globalPrefs.edit().putBoolean("has_requested_system_permission", false).apply()
-    } catch (_: Exception) {}
-  }
-
   private fun syncWithCloudData(userId: String, idToken: String?) {
     viewModelScope.launch(Dispatchers.IO) {
       val cloudData = firebaseDataManager.loadUserData(userId, idToken)

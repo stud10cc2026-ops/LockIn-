@@ -163,9 +163,9 @@ class DailyGoalWidgetProvider : AppWidgetProvider() {
 
       val widthPx = 640
       val heightPx = when {
-        totalDays <= 7 -> 40
-        totalDays <= 31 -> 80
-        else -> 140
+        totalDays <= 7 -> 36
+        totalDays <= 31 -> 72
+        else -> 120
       }
 
       val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
@@ -177,7 +177,7 @@ class DailyGoalWidgetProvider : AppWidgetProvider() {
       val baseRadius = when {
         totalDays <= 7 -> (minOf(spacingX, spacingY) * 0.32f).coerceIn(10f, 18f)
         totalDays <= 31 -> (minOf(spacingX, spacingY) * 0.34f).coerceIn(7f, 13f)
-        else -> (minOf(spacingX, spacingY) * 0.36f).coerceIn(4f, 7.5f)
+        else -> (minOf(spacingX, spacingY) * 0.35f).coerceIn(4f, 7f)
       }
 
       val paintPassed = Paint(Paint.ANTI_ALIAS_FLAG).apply {

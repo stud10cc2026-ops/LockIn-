@@ -631,8 +631,8 @@ fun DailyGoalDotGrid(
 
   val canvasHeight = when {
     totalDays <= 7 -> 32.dp
-    totalDays <= 31 -> 52.dp
-    else -> 92.dp
+    totalDays <= 31 -> 48.dp
+    else -> 84.dp
   }
 
   Canvas(
