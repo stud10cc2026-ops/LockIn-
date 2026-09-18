@@ -19,11 +19,13 @@ class SessionCompletionReceiver : BroadcastReceiver() {
             appPreferences.completeSessionInPrefs(durationMinutes)
             
             // Post a system notification to inform the user
-            NotificationHelper.postSystemNotification(
-                context,
-                "Focus Complete",
-                "Your session is finished. All apps are unblocked."
-            )
+            if (NotificationHelper.isSystemPermissionGranted(context) && appPreferences.areNotificationsEnabledLocally()) {
+                NotificationHelper.postSystemNotification(
+                    context,
+                    "The timer has ended.",
+                    "All apps are unblocked."
+                )
+            }
             
             // Reschedule inactivity reminders as the user is now "active" (finished a session)
             InactivityReminderManager.recordActivityAndReschedule(context)

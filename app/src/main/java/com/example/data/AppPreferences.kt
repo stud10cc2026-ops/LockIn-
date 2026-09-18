@@ -300,6 +300,16 @@ class AppPreferences(private val context: Context) {
     } catch (_: Exception) {}
   }
 
+  fun hasSentWelcomeNotification(): Boolean {
+    return globalPrefs.getBoolean("has_sent_welcome_notification", false)
+  }
+
+  fun setWelcomeNotificationSent() {
+    try {
+      globalPrefs.edit().putBoolean("has_sent_welcome_notification", true).apply()
+    } catch (_: Exception) {}
+  }
+
   fun hasRequestedSystemPermission(): Boolean {
     return globalPrefs.getBoolean("has_requested_system_permission", false)
   }
@@ -349,6 +359,33 @@ class AppPreferences(private val context: Context) {
     } else {
       true
     }
+  }
+
+  fun getAppNotifications(): List<AppNotificationItem> {
+    val activeUid = getActiveUserId()
+    val prefs = getPrefsForUser(activeUid)
+    val appNotifications = mutableListOf<AppNotificationItem>()
+    val notifJsonStr = prefs.getString("app_notifications_json", null)
+    if (!notifJsonStr.isNullOrEmpty()) {
+      try {
+        val jsonArray = JSONArray(notifJsonStr)
+        for (i in 0 until jsonArray.length()) {
+          val obj = jsonArray.getJSONObject(i)
+          val ts = obj.optLong("timestamp", System.currentTimeMillis())
+          appNotifications.add(
+            AppNotificationItem(
+              id = obj.getString("id"),
+              title = obj.getString("title"),
+              message = obj.getString("message"),
+              timestamp = ts,
+              timestampFormatted = formatRelativeNotificationTime(ts),
+              isRead = obj.optBoolean("isRead", false)
+            )
+          )
+        }
+      } catch (_: Exception) {}
+    }
+    return appNotifications
   }
 
   fun appendAppNotification(item: AppNotificationItem) {
@@ -413,16 +450,18 @@ class AppPreferences(private val context: Context) {
       editor.putLong("lastSavedTimestamp", now)
       editor.apply()
       
-      // Append app notification
-      appendAppNotification(
-        AppNotificationItem(
-          id = java.util.UUID.randomUUID().toString(),
-          title = "The timer has ended.",
-          message = "All apps are unblocked.",
-          timestamp = now,
-          isRead = false
+      // Append app notification if system notification permission is granted
+      if (com.example.util.NotificationHelper.isSystemPermissionGranted(context) && areNotificationsEnabledLocally()) {
+        appendAppNotification(
+          AppNotificationItem(
+            id = java.util.UUID.randomUUID().toString(),
+            title = "The timer has ended.",
+            message = "All apps are unblocked.",
+            timestamp = now,
+            isRead = false
+          )
         )
-      )
+      }
     } catch (_: Exception) {}
   }
 

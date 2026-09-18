@@ -279,9 +279,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _requestPermissionEvent.tryEmit(Unit)
       } else {
         syncSystemNotificationPermission(appContext)
+        if (isGranted) {
+          sendWelcomeNotificationIfNeeded()
+        }
       }
     } else {
       syncSystemNotificationPermission(appContext)
+      if (NotificationHelper.isSystemPermissionGranted(appContext)) {
+        sendWelcomeNotificationIfNeeded()
+      }
     }
   }
 
@@ -338,12 +344,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
       )
     }
     saveCurrentState()
+    if (isGranted) {
+      sendWelcomeNotificationIfNeeded()
+    }
+  }
+
+  fun sendWelcomeNotificationIfNeeded() {
+    val appContext = getApplication<Application>()
+    val isSystemGranted = NotificationHelper.isSystemPermissionGranted(appContext)
+    if (!prefs.hasSentWelcomeNotification() && isSystemGranted) {
+      prefs.setWelcomeNotificationSent()
+      triggerNotification("Welcome to Lock In", "Take back control of your time.")
+    }
   }
 
   fun refreshNotificationTimestamps() {
     val now = System.currentTimeMillis()
+    val latestSavedNotifs = prefs.getAppNotifications()
     _uiState.update { current ->
-      val refreshed = current.appNotifications.map { notif ->
+      val listToUse = if (latestSavedNotifs.size >= current.appNotifications.size) latestSavedNotifs else current.appNotifications
+      val refreshed = listToUse.map { notif ->
         notif.copy(timestampFormatted = formatRelativeNotificationTime(notif.timestamp, now))
       }
       current.copy(appNotifications = refreshed)
@@ -360,6 +380,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
       )
     }
     saveCurrentState()
+    if (isSystemGranted && !prefs.isFirstLaunch()) {
+      sendWelcomeNotificationIfNeeded()
+    }
   }
 
   fun setNotificationsEnabled(enabled: Boolean, context: Context? = null) {
@@ -398,7 +421,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun triggerNotification(title: String, message: String) {
-    if (!_uiState.value.notificationsEnabled) return
+    val appContext = getApplication<Application>()
+    val isSystemGranted = NotificationHelper.isSystemPermissionGranted(appContext)
+    if (!isSystemGranted || !_uiState.value.notificationsEnabled) return
 
     val now = System.currentTimeMillis()
     val newItem = AppNotificationItem(

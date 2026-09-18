@@ -18,6 +18,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    applicationVariants.all {
+        outputs.all {
+            val outputImpl = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            outputImpl?.outputFileName = "LockIn.apk"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

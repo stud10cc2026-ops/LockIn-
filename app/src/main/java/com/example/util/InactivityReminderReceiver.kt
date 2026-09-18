@@ -132,17 +132,19 @@ class InactivityReminderReceiver : BroadcastReceiver() {
         val title = "Goal Completed!"
         val message = "You completed your ${goal.title} goal. Great work!"
         
-        NotificationHelper.postSystemNotification(context, title, message)
-        
-        // Persist into app notifications
-        val now = System.currentTimeMillis()
-        val notifItem = AppNotificationItem(
-          title = title,
-          message = message,
-          timestamp = now,
-          timestampFormatted = formatRelativeNotificationTime(now, now)
-        )
-        prefs.appendAppNotification(notifItem)
+        if (NotificationHelper.isSystemPermissionGranted(context) && prefs.areNotificationsEnabledLocally()) {
+          NotificationHelper.postSystemNotification(context, title, message)
+          
+          // Persist into app notifications
+          val now = System.currentTimeMillis()
+          val notifItem = AppNotificationItem(
+            title = title,
+            message = message,
+            timestamp = now,
+            timestampFormatted = formatRelativeNotificationTime(now, now)
+          )
+          prefs.appendAppNotification(notifItem)
+        }
         
         prefs.setLastNotifiedGoalId(goal.id)
       }

@@ -66,17 +66,11 @@ object NotificationHelper {
     message: String,
     notificationId: Int = System.currentTimeMillis().toInt()
   ) {
-    createNotificationChannel(context)
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      if (ActivityCompat.checkSelfPermission(
-          context,
-          Manifest.permission.POST_NOTIFICATIONS
-        ) != PackageManager.PERMISSION_GRANTED
-      ) {
-        return
-      }
+    if (!isSystemPermissionGranted(context)) {
+      return
     }
+
+    createNotificationChannel(context)
 
     val intent = android.content.Intent(context, com.example.MainActivity::class.java).apply {
       flags = android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
