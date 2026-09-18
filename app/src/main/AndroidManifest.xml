@@ -54,6 +54,11 @@
         </receiver>
 
         <receiver
+            android:name="com.example.util.SessionCompletionReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
             android:name="com.example.widget.DailyGoalWidgetProvider"
             android:enabled="true"
             android:exported="true"

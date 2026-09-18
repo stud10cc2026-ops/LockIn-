@@ -257,10 +257,6 @@ class AppPreferences(private val context: Context) {
         }
       }
 
-      if (isSessionActive && remainingSeconds <= 0) {
-        isSessionActive = false
-      }
-
       return defaultState.copy(
         userName = userName,
         isLoggedIn = isLoggedIn,
@@ -378,6 +374,71 @@ class AppPreferences(private val context: Context) {
       }
       prefs.edit().putString("app_notifications_json", newArray.toString()).apply()
     } catch (_: Exception) {}
+  }
+  fun completeSessionInPrefs(durationMinutes: Int) {
+    try {
+      val activeUid = getActiveUserId()
+      val prefs = getPrefsForUser(activeUid)
+      val editor = prefs.edit()
+      
+      editor.putBoolean("isSessionActive", false)
+      editor.putBoolean("isSessionPaused", false)
+      editor.putInt("remainingSeconds", 0)
+      
+      // Add to history
+      val historyJsonStr = prefs.getString("history_json", "[]") ?: "[]"
+      val historyArray = try { JSONArray(historyJsonStr) } catch(_: Exception) { JSONArray() }
+      
+      val now = System.currentTimeMillis()
+      val timeFormat = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+      val timeStr = timeFormat.format(java.util.Date(now))
+      
+      val newObj = JSONObject().apply {
+        put("id", now.toString())
+        put("durationMinutes", durationMinutes)
+        put("selectedDurationMinutes", durationMinutes)
+        put("sessionType", "Focus session")
+        put("timestampFormatted", "Today · $timeStr")
+        put("dateGroup", "Today")
+        put("isCompleted", true)
+        put("timestampMillis", now)
+      }
+      
+      val updatedArray = JSONArray()
+      updatedArray.put(newObj)
+      for (i in 0 until historyArray.length()) {
+        updatedArray.put(historyArray.get(i))
+      }
+      editor.putString("history_json", updatedArray.toString())
+      editor.putLong("lastSavedTimestamp", now)
+      editor.apply()
+      
+      // Append app notification
+      appendAppNotification(
+        AppNotificationItem(
+          id = java.util.UUID.randomUUID().toString(),
+          title = "The timer has ended.",
+          message = "All apps are unblocked.",
+          timestamp = now,
+          isRead = false
+        )
+      )
+    } catch (_: Exception) {}
+  }
+
+  fun isSessionActive(): Boolean {
+    val activeUid = getActiveUserId()
+    return getPrefsForUser(activeUid).getBoolean("isSessionActive", false)
+  }
+
+  fun getEffectiveDurationMinutes(): Int {
+    val activeUid = getActiveUserId()
+    val prefs = getPrefsForUser(activeUid)
+    return if (prefs.getBoolean("isCustomDuration", false)) {
+      prefs.getInt("customMinutes", 0)
+    } else {
+      prefs.getInt("selectedDurationMinutes", 0)
+    }
   }
 
   fun isNightMode(): Boolean {

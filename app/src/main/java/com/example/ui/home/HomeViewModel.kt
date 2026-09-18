@@ -171,15 +171,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     _uiState.value = stateWithStats
 
     // Check for goal completion notification on startup
-    checkAndNotifyGoalCompletion(savedGoal)
+    try {
+      checkAndNotifyGoalCompletion(savedGoal)
+    } catch (_: Exception) {}
 
     if (stateWithStats.isLoggedIn && !stateWithStats.userId.isNullOrEmpty()) {
       syncWithCloudData(stateWithStats.userId, stateWithStats.accessToken)
     }
 
-    if (stateWithStats.isSessionActive && stateWithStats.remainingSeconds > 0) {
-      FocusBlockerService.startService(getApplication())
-      resumeTimerLoop()
+    if (stateWithStats.isSessionActive) {
+      if (stateWithStats.remainingSeconds > 0) {
+        FocusBlockerService.startService(getApplication())
+        resumeTimerLoop()
+      } else {
+        // Session expired while app was closed - finalize it now
+        completeSessionNaturally()
+      }
     }
   }
 
@@ -521,11 +528,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
   private fun saveCurrentState() {
     val currentState = _uiState.value
-    prefs.saveUiState(currentState)
     val uid = currentState.userId
-    if (currentState.isLoggedIn && !uid.isNullOrEmpty()) {
-      val token = currentState.accessToken
-      viewModelScope.launch(Dispatchers.IO) {
+    val token = currentState.accessToken
+    viewModelScope.launch(Dispatchers.IO) {
+      prefs.saveUiState(currentState)
+      if (currentState.isLoggedIn && !uid.isNullOrEmpty()) {
         firebaseDataManager.saveUserData(uid, token, currentState)
       }
     }
@@ -731,6 +738,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
       )
     }
     saveCurrentState()
+    com.example.util.SessionAlarmManager.scheduleSessionCompletion(getApplication(), totalSecs)
     FocusBlockerService.startService(getApplication())
     resumeTimerLoop()
     triggerNotification("Focus Session started", "All apps are blocked.")
@@ -769,13 +777,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun togglePauseResumeFocusSession() {
-    _uiState.update { it.copy(isSessionPaused = !it.isSessionPaused) }
+    val wasPaused = _uiState.value.isSessionPaused
+    val newState = !wasPaused
+    _uiState.update { it.copy(isSessionPaused = newState) }
     saveCurrentState()
+    
+    if (newState) {
+      // Paused: cancel background alarm
+      com.example.util.SessionAlarmManager.cancelSessionCompletion(getApplication())
+    } else {
+      // Resumed: reschedule background alarm with remaining time
+      com.example.util.SessionAlarmManager.scheduleSessionCompletion(getApplication(), _uiState.value.remainingSeconds)
+    }
   }
 
   private fun completeSessionNaturally() {
     timerJob?.cancel()
     timerJob = null
+    com.example.util.SessionAlarmManager.cancelSessionCompletion(getApplication())
     FocusBlockerService.stopService(getApplication())
 
     val currentDuration = _uiState.value.effectiveDurationMinutes
@@ -814,6 +833,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   fun completePushUpChallengeSession() {
     timerJob?.cancel()
     timerJob = null
+    com.example.util.SessionAlarmManager.cancelSessionCompletion(getApplication())
     FocusBlockerService.stopService(getApplication())
 
     val totalSecs = _uiState.value.totalSessionSeconds
@@ -895,6 +915,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun endFocusSession() {
+    com.example.util.SessionAlarmManager.cancelSessionCompletion(getApplication())
     FocusBlockerService.stopService(getApplication())
     recordEarlyExitSession()
   }
