@@ -8,21 +8,28 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
+import com.example.R
+import com.example.data.AppPreferences
+import com.example.ui.home.HomeUiState
 import com.example.util.AppBlockerHelper
+import com.example.util.SessionAlarmManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class FocusBlockerService : Service() {
 
   private val serviceJob = Job()
   private val serviceScope = CoroutineScope(Dispatchers.Default + serviceJob)
   private var isRunning = false
+  private var timerJob: Job? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -39,40 +46,47 @@ class FocusBlockerService : Service() {
       return START_NOT_STICKY
     }
 
-    startForegroundNotification()
+    if (action == ACTION_TOGGLE_PAUSE) {
+      handleTogglePause()
+      return START_STICKY
+    }
+
+    val prefs = AppPreferences(applicationContext)
+    val state = prefs.loadUiState(HomeUiState())
+
+    startForegroundNotification(state.remainingSeconds, state.isSessionPaused)
 
     if (!isRunning) {
       isRunning = true
       startMonitoringForegroundApp()
+      startTimerLoop()
     }
 
     return START_STICKY
   }
 
-  private fun startForegroundNotification() {
+  private fun handleTogglePause() {
+    val prefs = AppPreferences(applicationContext)
+    val newPauseState = prefs.toggleSessionPaused()
+    val state = prefs.loadUiState(HomeUiState())
+
+    if (newPauseState) {
+      SessionAlarmManager.cancelSessionCompletion(applicationContext)
+    } else {
+      SessionAlarmManager.scheduleSessionCompletion(applicationContext, state.remainingSeconds)
+    }
+
+    // Broadcast change so ViewModel updates
+    val broadcastIntent = Intent(ACTION_SESSION_STATE_CHANGED)
+    applicationContext.sendBroadcast(broadcastIntent)
+
+    updateNotification(state.remainingSeconds, newPauseState)
+  }
+
+  private fun startForegroundNotification(remainingSeconds: Int, isPaused: Boolean) {
     createNotificationChannel()
 
-    val intent = Intent(this, MainActivity::class.java).apply {
-      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-    }
-    val pendingIntent = PendingIntent.getActivity(
-      this,
-      0,
-      intent,
-      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-
-    val notificationIcon = com.example.R.drawable.ic_stat_notification
-
-    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-      .setContentTitle("Lock In Focus Active")
-      .setContentText("Social media & distraction apps are restricted. Stay focused.")
-      .setSmallIcon(notificationIcon)
-      .setOngoing(true)
-      .setPriority(NotificationCompat.PRIORITY_HIGH)
-      .setCategory(NotificationCompat.CATEGORY_SERVICE)
-      .setContentIntent(pendingIntent)
-      .build()
+    val notification = buildLockscreenNotification(remainingSeconds, isPaused)
 
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -90,6 +104,95 @@ class FocusBlockerService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
       } catch (_: Exception) {}
+    }
+  }
+
+  private fun updateNotification(remainingSeconds: Int, isPaused: Boolean) {
+    val notificationManager = getSystemService(NotificationManager::class.java)
+    val notification = buildLockscreenNotification(remainingSeconds, isPaused)
+    notificationManager?.notify(NOTIFICATION_ID, notification)
+  }
+
+  private fun buildLockscreenNotification(remainingSeconds: Int, isPaused: Boolean): android.app.Notification {
+    val intent = Intent(this, MainActivity::class.java).apply {
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+    val contentPendingIntent = PendingIntent.getActivity(
+      this,
+      0,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    val pauseIntent = Intent(this, FocusBlockerService::class.java).apply {
+      action = ACTION_TOGGLE_PAUSE
+    }
+    val pausePendingIntent = PendingIntent.getService(
+      this,
+      1,
+      pauseIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    val mins = remainingSeconds / 60
+    val secs = remainingSeconds % 60
+    val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+
+    val remoteViews = RemoteViews(packageName, R.layout.notification_lockscreen_session).apply {
+      setTextViewText(R.id.tv_notification_timer, formattedTime)
+      setImageViewResource(
+        R.id.btn_notification_pause,
+        if (isPaused) R.drawable.ic_notification_play_black else R.drawable.ic_notification_pause_black
+      )
+      setOnClickPendingIntent(R.id.btn_notification_pause, pausePendingIntent)
+      setOnClickPendingIntent(R.id.notification_root, contentPendingIntent)
+    }
+
+    val notificationIcon = R.drawable.ic_stat_notification
+
+    return NotificationCompat.Builder(this, CHANNEL_ID)
+      .setSmallIcon(notificationIcon)
+      .setCustomContentView(remoteViews)
+      .setCustomBigContentView(remoteViews)
+      .setOngoing(true)
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setCategory(NotificationCompat.CATEGORY_SERVICE)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setContentIntent(contentPendingIntent)
+      .build()
+  }
+
+  private fun startTimerLoop() {
+    timerJob?.cancel()
+    timerJob = serviceScope.launch {
+      while (isActive && isRunning) {
+        delay(1000L)
+        val prefs = AppPreferences(applicationContext)
+        val state = prefs.loadUiState(HomeUiState())
+
+        if (!state.isSessionActive) {
+          stopForeground(STOP_FOREGROUND_REMOVE)
+          stopSelf()
+          break
+        }
+
+        if (!state.isSessionPaused) {
+          if (state.remainingSeconds > 0) {
+            val newRem = maxOf(0, state.remainingSeconds - 1)
+            prefs.updateRemainingSeconds(newRem)
+            updateNotification(newRem, false)
+
+            if (newRem <= 0) {
+              prefs.completeSessionInPrefs(state.effectiveDurationMinutes)
+              stopForeground(STOP_FOREGROUND_REMOVE)
+              stopSelf()
+              break
+            }
+          }
+        } else {
+          updateNotification(state.remainingSeconds, true)
+        }
+      }
     }
   }
 
@@ -182,6 +285,8 @@ class FocusBlockerService : Service() {
     const val NOTIFICATION_ID = 8891
     const val ACTION_START = "ACTION_START_FOCUS_BLOCKER"
     const val ACTION_STOP = "ACTION_STOP_FOCUS_BLOCKER"
+    const val ACTION_TOGGLE_PAUSE = "ACTION_TOGGLE_PAUSE_FOCUS_SESSION"
+    const val ACTION_SESSION_STATE_CHANGED = "com.example.action.SESSION_STATE_CHANGED"
 
     fun startService(context: Context) {
       val intent = Intent(context, FocusBlockerService::class.java).apply {
@@ -204,6 +309,21 @@ class FocusBlockerService : Service() {
       }
       try {
         context.stopService(intent)
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
+    }
+
+    fun notifyStateChanged(context: Context) {
+      val intent = Intent(context, FocusBlockerService::class.java).apply {
+        action = ACTION_START
+      }
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          context.startForegroundService(intent)
+        } else {
+          context.startService(intent)
+        }
       } catch (e: Exception) {
         e.printStackTrace()
       }

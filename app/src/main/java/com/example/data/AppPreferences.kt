@@ -470,6 +470,27 @@ class AppPreferences(private val context: Context) {
     return getPrefsForUser(activeUid).getBoolean("isSessionActive", false)
   }
 
+  fun toggleSessionPaused(): Boolean {
+    val activeUid = getActiveUserId()
+    val prefs = getPrefsForUser(activeUid)
+    val currentPaused = prefs.getBoolean("isSessionPaused", false)
+    val newPaused = !currentPaused
+    prefs.edit()
+      .putBoolean("isSessionPaused", newPaused)
+      .putLong("lastSavedTimestamp", System.currentTimeMillis())
+      .apply()
+    return newPaused
+  }
+
+  fun updateRemainingSeconds(remSecs: Int) {
+    val activeUid = getActiveUserId()
+    val prefs = getPrefsForUser(activeUid)
+    prefs.edit()
+      .putInt("remainingSeconds", maxOf(0, remSecs))
+      .putLong("lastSavedTimestamp", System.currentTimeMillis())
+      .apply()
+  }
+
   fun getEffectiveDurationMinutes(): Int {
     val activeUid = getActiveUserId()
     val prefs = getPrefsForUser(activeUid)

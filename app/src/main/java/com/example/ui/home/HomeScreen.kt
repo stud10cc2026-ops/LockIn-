@@ -212,7 +212,6 @@ fun HomeScreen(
       onClearBlockedAppAlert = { viewModel.clearBlockedAppAlert() },
       onPauseResumeClick = { viewModel.togglePauseResumeFocusSession() },
       onEndSessionClick = { viewModel.endFocusSession() },
-      onPushUpChallengeCompleted = { viewModel.completePushUpChallengeSession() },
       modifier = modifier
     )
   } else {
@@ -359,11 +358,6 @@ fun HomeScreen(
                   onSelectCustom = { viewModel.toggleCustomDuration() },
                   onCustomMinutesChange = { viewModel.updateCustomMinutes(it) }
                 )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // 4. ESCAPE CHALLENGE CARD
-                EscapeChallengeCard(isNightMode = isNightMode)
 
                 Spacer(modifier = Modifier.height(18.dp))
 
@@ -1109,51 +1103,6 @@ private fun DurationPill(
       ),
       color = textColor
     )
-  }
-}
-
-/**
- * Escape Challenge Card: Secondary card detailing early exit pushup commitment.
- */
-@Composable
-private fun EscapeChallengeCard(isNightMode: Boolean) {
-  val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-
-  Surface(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
-    color = surfaceColor,
-    border = BorderStroke(1.dp, borderColor)
-  ) {
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-      ) {
-        Text(
-          text = "Early exit",
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp
-          ),
-          color = textColor
-        )
-      }
-
-      Text(
-        text = "Complete 15 push-ups to end the session early.",
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-        color = mutedColor
-      )
-    }
   }
 }
 

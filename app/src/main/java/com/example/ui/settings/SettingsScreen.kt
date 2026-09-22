@@ -411,7 +411,7 @@ fun SettingsContent(
             testTag = "settings_faq_row",
             onClick = {
               infoDialogTitle = "FAQ"
-              infoDialogContent = "• How does Lock In work?\nLock In helps you stay undistracted by locking chosen apps during active focus sessions.\n\n• What is the Push-Up Challenge?\nTo escape an active lock early, you must complete genuine full-body push-ups verified by camera pose analysis.\n\n• Is my camera data private?\nYes! All pose detection and rep counting runs 100% locally on your device in real-time."
+              infoDialogContent = "• How does Lock In work?\nLock In helps you stay undistracted by locking chosen apps during active focus sessions."
             }
           )
 
@@ -453,7 +453,7 @@ fun SettingsContent(
             testTag = "settings_policy_row",
             onClick = {
               infoDialogTitle = "User Policy"
-              infoDialogContent = "Lock In requires Usage Access and Overlay permissions solely to detect and block selected distracting apps during active sessions.\n\nCamera permission is used only during the escape push-up challenge to verify push-up movement. No video feeds or images are ever stored or uploaded."
+              infoDialogContent = "Lock In requires Usage Access and Overlay permissions solely to detect and block selected distracting apps during active sessions."
             }
           )
         }

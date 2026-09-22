@@ -140,6 +140,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   private var timerJob: Job? = null
   private var undoDeleteJob: Job? = null
 
+  private val sessionStateReceiver = object : android.content.BroadcastReceiver() {
+    override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+      val state = prefs.loadUiState(HomeUiState())
+      _uiState.update { it.copy(
+        isSessionPaused = state.isSessionPaused,
+        remainingSeconds = state.remainingSeconds
+      ) }
+    }
+  }
+
   init {
     val loadedState = prefs.loadUiState(_uiState.value)
     val isSystemGranted = NotificationHelper.isSystemPermissionGranted(getApplication())
@@ -188,6 +198,22 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         completeSessionNaturally()
       }
     }
+
+    try {
+      val filter = android.content.IntentFilter(FocusBlockerService.ACTION_SESSION_STATE_CHANGED)
+      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        getApplication<android.app.Application>().registerReceiver(sessionStateReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+      } else {
+        getApplication<android.app.Application>().registerReceiver(sessionStateReceiver, filter)
+      }
+    } catch (_: Exception) {}
+  }
+
+  override fun onCleared() {
+    super.onCleared()
+    try {
+      getApplication<android.app.Application>().unregisterReceiver(sessionStateReceiver)
+    } catch (_: Exception) {}
   }
 
   fun resetAppCompletely() {
@@ -814,6 +840,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
       // Resumed: reschedule background alarm with remaining time
       com.example.util.SessionAlarmManager.scheduleSessionCompletion(getApplication(), _uiState.value.remainingSeconds)
     }
+    FocusBlockerService.notifyStateChanged(getApplication())
   }
 
   private fun completeSessionNaturally() {
@@ -852,49 +879,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     saveCurrentState()
 
     triggerNotification("The timer has ended.", "All apps are unblocked.")
-    com.example.util.InactivityReminderManager.recordActivityAndReschedule(getApplication())
-  }
-
-  fun completePushUpChallengeSession() {
-    timerJob?.cancel()
-    timerJob = null
-    com.example.util.SessionAlarmManager.cancelSessionCompletion(getApplication())
-    FocusBlockerService.stopService(getApplication())
-
-    val totalSecs = _uiState.value.totalSessionSeconds
-    val remSecs = _uiState.value.remainingSeconds
-    val selectedMins = _uiState.value.effectiveDurationMinutes
-    val elapsedSecs = maxOf(0, totalSecs - remSecs)
-    val elapsedMins = if (elapsedSecs == 0) 1 else maxOf(1, Math.round(elapsedSecs / 60.0).toInt())
-    val now = System.currentTimeMillis()
-    val timeStr = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(now))
-    val dateGroupStr = getDateGroupLabel(now)
-
-    val newItem = FocusSessionHistoryItem(
-      id = now.toString(),
-      durationMinutes = elapsedMins,
-      selectedDurationMinutes = selectedMins,
-      sessionType = "Focus session",
-      timestampFormatted = "Today · $timeStr",
-      dateGroup = dateGroupStr,
-      isCompleted = true,
-      timestampMillis = now
-    )
-
-    _uiState.update { state ->
-      val updatedHistory = listOf(newItem) + state.historyItems
-      val stateWithHistory = state.copy(
-        isSessionActive = false,
-        isSessionPaused = false,
-        remainingSeconds = 0,
-        blockedAppName = null,
-        historyItems = updatedHistory
-      )
-      recalculateTodayStats(stateWithHistory)
-    }
-    saveCurrentState()
-
-    triggerNotification("Push-Up Challenge Completed", "Push-up challenge complete! All apps are unblocked.")
     com.example.util.InactivityReminderManager.recordActivityAndReschedule(getApplication())
   }
 
