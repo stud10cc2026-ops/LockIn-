@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_progress_indicator_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_progress_indicator_card"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:id="@+id/widget_progress_indicator_active_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_progress_indicator_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Progress Indicator"
+            android:textColor="#FFFFFF"
+            android:textSize="14.5sp"
+            android:textStyle="normal"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/widget_progress_indicator_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Focus • Day 12 of 122 • 110 days to go"
+            android:textColor="#8E96A3"
+            android:textSize="12sp"
+            android:layout_marginTop="3dp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#24262E"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/widget_progress_indicator_percent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="10%"
+                android:textColor="#FFFFFF"
+                android:textSize="34sp"
+                android:fontFamily="sans-serif-light" />
+
+            <LinearLayout
+                android:id="@+id/widget_progress_indicator_badge_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginStart="14dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/widget_progress_indicator_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="↗ 30%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace"
+                    android:background="@drawable/bg_pill_outline_white"
+                    android:paddingHorizontal="9dp"
+                    android:paddingVertical="3dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="vs. last week"
+                    android:textColor="#8E96A3"
+                    android:textSize="11.5sp"
+                    android:layout_marginStart="8dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/widget_progress_indicator_bar"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:scaleType="fitXY"
+            android:adjustViewBounds="true"
+            android:contentDescription="Progress Bar" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_progress_indicator_empty_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NO GOAL SET"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tap to set a goal"
+            android:textColor="#8E96A3"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+    </LinearLayout>
+</RelativeLayout>

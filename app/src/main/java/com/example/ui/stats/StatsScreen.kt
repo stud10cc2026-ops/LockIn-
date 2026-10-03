@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,9 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,25 +39,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.DarkBackground
-import com.example.ui.theme.DarkButtonCharcoal
 import com.example.ui.theme.DarkCardSurface
-import com.example.ui.theme.DarkContainerNeutral
 import com.example.ui.theme.DarkSubtleBorder
-import com.example.ui.theme.DarkTextOnLime
-import com.example.ui.theme.DarkTextPrimary
-import com.example.ui.theme.DarkTextSecondary
-import com.example.ui.theme.LightCardSurface
-import com.example.ui.theme.LightContainerNeutral
-import com.example.ui.theme.LightPageBackground
-import com.example.ui.theme.LightSubtleBorder
-import com.example.ui.theme.LightTextPrimary
-import com.example.ui.theme.LightTextSecondary
-import com.example.ui.theme.SignatureNeonLime
+import com.example.ui.theme.DarkTextOffWhite
 
 data class DayBarData(
   val dayLabel: String,
@@ -70,10 +60,58 @@ data class DayBarData(
   val isHighlight: Boolean = false
 )
 
+private val ThinBarChartOutlineIcon: ImageVector by lazy {
+  ImageVector.Builder(
+    name = "ThinBarChartOutline",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f
+  ).path(
+    stroke = SolidColor(Color.Black),
+    strokeLineWidth = 1.5f,
+    strokeLineCap = StrokeCap.Round,
+    strokeLineJoin = StrokeJoin.Round
+  ) {
+    moveTo(5f, 20f)
+    lineTo(5f, 14f)
+    moveTo(12f, 20f)
+    lineTo(12f, 8f)
+    moveTo(19f, 20f)
+    lineTo(19f, 4f)
+  }.build()
+}
+
+private val ThinLightbulbOutlineIcon: ImageVector by lazy {
+  ImageVector.Builder(
+    name = "ThinLightbulbOutline",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f
+  ).path(
+    stroke = SolidColor(Color.Black),
+    strokeLineWidth = 1.5f,
+    strokeLineCap = StrokeCap.Round,
+    strokeLineJoin = StrokeJoin.Round
+  ) {
+    moveTo(9f, 21f)
+    lineTo(15f, 21f)
+    moveTo(10f, 18f)
+    lineTo(14f, 18f)
+    moveTo(12f, 3f)
+    curveTo(7.58f, 3f, 4f, 6.58f, 4f, 11f)
+    curveTo(4f, 13.68f, 5.32f, 16.05f, 7.34f, 17.5f)
+    lineTo(16.66f, 17.5f)
+    curveTo(18.68f, 16.05f, 20f, 13.68f, 20f, 11f)
+    curveTo(20f, 6.58f, 16.42f, 3f, 12f, 3f)
+    close()
+  }.build()
+}
+
 /**
  * Stats Screen:
- * Displays focus statistics, weekly bar chart, key metrics, consistency tracking,
- * and a subtle focus insight in a clean, minimal design.
+ * Restored typography, colors, and layout, with the Focus Time hero card styled in white.
  */
 @Composable
 fun StatsContent(
@@ -100,14 +138,11 @@ fun StatsContent(
   var selectedPeriod by remember { mutableStateOf(0) } // 0: Week, 1: Month
 
   val maxHours = maxOf(2.0f, weekDays.maxOfOrNull { it.hours } ?: 2.0f)
-  val bgColor = if (isNightMode) DarkBackground else LightPageBackground
-  val textColor = if (isNightMode) Color.White else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
 
   Box(
     modifier = modifier
       .fillMaxSize()
-      .background(bgColor)
+      .background(Color.Transparent)
   ) {
     Column(
       modifier = Modifier
@@ -115,7 +150,7 @@ fun StatsContent(
         .verticalScroll(rememberScrollState())
         .statusBarsPadding()
         .padding(horizontal = 20.dp)
-        .padding(bottom = 90.dp) // Space for bottom navigation
+        .padding(bottom = 120.dp) // Space for floating nav
     ) {
       Spacer(modifier = Modifier.height(14.dp))
 
@@ -123,14 +158,12 @@ fun StatsContent(
       StatsHeader(
         selectedPeriod = selectedPeriod,
         isNightMode = isNightMode,
-        textColor = textColor,
-        mutedColor = mutedColor,
         onPeriodSelected = { selectedPeriod = it }
       )
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // 2. MAIN FOCUS SUMMARY CARD
+      // 2. MAIN FOCUS SUMMARY CARD (WHITE)
       MainFocusSummaryCard(
         totalFocusTime = if (selectedPeriod == 0) weeklyTotalFormatted else monthlyTotalFormatted,
         periodLabel = if (selectedPeriod == 0) "This week" else "This month",
@@ -182,12 +215,10 @@ fun StatsContent(
 private fun StatsHeader(
   selectedPeriod: Int,
   isNightMode: Boolean,
-  textColor: Color,
-  mutedColor: Color,
   onPeriodSelected: (Int) -> Unit
 ) {
-  val containerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  val surfaceColor = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
 
   Row(
     modifier = Modifier.fillMaxWidth(),
@@ -202,29 +233,33 @@ private fun StatsHeader(
       Text(
         text = "Stats",
         style = MaterialTheme.typography.headlineMedium.copy(
-          fontWeight = FontWeight.Bold,
-          fontSize = 30.sp,
-          lineHeight = 36.sp,
-          letterSpacing = (-0.5).sp
+          fontWeight = FontWeight.SemiBold,
+          fontSize = 32.sp,
+          lineHeight = 35.2.sp,
+          letterSpacing = (-0.02).em
         ),
-        color = textColor,
+        color = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F),
         modifier = Modifier.testTag("stats_header_title")
       )
       Spacer(modifier = Modifier.height(2.dp))
       Text(
         text = "See how you're building your focus.",
-        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-        color = mutedColor
+        style = MaterialTheme.typography.bodyMedium.copy(
+          fontWeight = FontWeight.Medium,
+          fontSize = 16.sp
+        ),
+        color = Color(0xFF8E96A3)
       )
     }
 
     // Segmented Period Switcher (Week / Month)
     Surface(
-      shape = RoundedCornerShape(10.dp),
-      color = containerColor,
-      border = BorderStroke(1.dp, borderColor)
+      shape = RoundedCornerShape(20.dp),
+      color = surfaceColor,
+      border = BorderStroke(1.dp, borderColor),
+      shadowElevation = 0.dp
     ) {
-      Row(modifier = Modifier.padding(2.dp)) {
+      Row(modifier = Modifier.padding(3.dp)) {
         PeriodTabItem(
           label = "Week",
           isSelected = selectedPeriod == 0,
@@ -251,7 +286,7 @@ private fun PeriodTabItem(
 ) {
   val surfaceColor by animateColorAsState(
     targetValue = if (isSelected) {
-      if (isNightMode) SignatureNeonLime else DarkButtonCharcoal
+      if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
     } else {
       Color.Transparent
     },
@@ -260,26 +295,26 @@ private fun PeriodTabItem(
 
   val textColor by animateColorAsState(
     targetValue = if (isSelected) {
-      if (isNightMode) DarkTextOnLime else Color.White
+      if (isNightMode) Color(0xFF1A1A1F) else Color.White
     } else {
-      if (isNightMode) DarkTextSecondary else LightTextSecondary
+      Color(0xFF8E96A3)
     },
     animationSpec = tween(durationMillis = 200)
   )
 
   Box(
     modifier = Modifier
-      .clip(RoundedCornerShape(8.dp))
+      .clip(RoundedCornerShape(16.dp))
       .background(surfaceColor)
       .clickable(onClick = onClick)
-      .padding(horizontal = 12.dp, vertical = 6.dp),
+      .padding(horizontal = 14.dp, vertical = 7.dp),
     contentAlignment = Alignment.Center
   ) {
     Text(
       text = label,
       style = MaterialTheme.typography.labelSmall.copy(
-        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-        fontSize = 12.sp
+        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+        fontSize = 13.sp
       ),
       color = textColor,
       maxLines = 1,
@@ -294,14 +329,15 @@ private fun MainFocusSummaryCard(
   periodLabel: String,
   isNightMode: Boolean
 ) {
-  val surfaceColor = if (isNightMode) DarkCardSurface else Color(0xFF141414)
-  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFF262626)
+  val surfaceColor = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
 
   Surface(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
+    shape = RoundedCornerShape(28.dp),
     color = surfaceColor,
-    border = BorderStroke(1.dp, borderColor)
+    border = BorderStroke(1.dp, borderColor),
+    shadowElevation = 0.dp
   ) {
     Column(
       modifier = Modifier.padding(20.dp)
@@ -313,19 +349,19 @@ private fun MainFocusSummaryCard(
       ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
           Box(
             modifier = Modifier
-              .size(24.dp)
+              .size(28.dp)
               .clip(CircleShape)
-              .background(SignatureNeonLime),
+              .background(Color(0xFFDCE5EE)),
             contentAlignment = Alignment.Center
           ) {
             Icon(
-              imageVector = Icons.Outlined.BarChart,
+              imageVector = ThinBarChartOutlineIcon,
               contentDescription = null,
-              tint = DarkButtonCharcoal,
+              tint = Color(0xFF1A1A1F),
               modifier = Modifier.size(14.dp)
             )
           }
@@ -333,31 +369,31 @@ private fun MainFocusSummaryCard(
             text = "Focus time",
             style = MaterialTheme.typography.labelLarge.copy(
               fontWeight = FontWeight.SemiBold,
-              fontSize = 14.sp
+              fontSize = 15.sp
             ),
-            color = Color.White
+            color = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
           )
         }
 
         Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFF262626))
-            .padding(horizontal = 7.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFDCE5EE))
+            .padding(horizontal = 10.dp, vertical = 5.dp)
         ) {
           Text(
             text = periodLabel.uppercase(),
             style = MaterialTheme.typography.labelSmall.copy(
-              fontSize = 10.sp,
-              fontWeight = FontWeight.Bold,
-              letterSpacing = 0.6.sp
+              fontSize = 12.sp,
+              fontWeight = FontWeight.SemiBold,
+              letterSpacing = 0.08.em
             ),
-            color = Color(0xFFD4D4D4)
+            color = Color(0xFF1A1A1F)
           )
         }
       }
 
-      Spacer(modifier = Modifier.height(14.dp))
+      Spacer(modifier = Modifier.height(16.dp))
 
       AnimatedContent(
         targetState = totalFocusTime,
@@ -369,20 +405,23 @@ private fun MainFocusSummaryCard(
         Text(
           text = targetTime,
           style = MaterialTheme.typography.displayMedium.copy(
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 38.sp,
-            letterSpacing = (-0.8).sp
+            letterSpacing = (-0.02).em
           ),
-          color = Color.White
+          color = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
         )
       }
 
-      Spacer(modifier = Modifier.height(2.dp))
+      Spacer(modifier = Modifier.height(4.dp))
 
       Text(
         text = "Total time spent locked in $periodLabel",
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-        color = Color(0xFFA3A3A3)
+        style = MaterialTheme.typography.bodySmall.copy(
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Medium
+        ),
+        color = Color(0xFF8E96A3)
       )
     }
   }
@@ -394,20 +433,22 @@ private fun WeeklyOverviewSection(
   maxHours: Float,
   isNightMode: Boolean
 ) {
-  val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val textColor = if (isNightMode) Color.White else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-  val barBg = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
+  val surfaceColor = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
+  val textColor = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
+  val barEmptyBg = if (isNightMode) Color(0xFF2F3947) else Color(0xFFE3E9F0)
+  val barActiveBg = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
 
   Surface(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
+    shape = RoundedCornerShape(28.dp),
     color = surfaceColor,
-    border = BorderStroke(1.dp, borderColor)
+    border = BorderStroke(1.dp, borderColor),
+    shadowElevation = 0.dp
   ) {
     Column(
-      modifier = Modifier.padding(18.dp)
+      modifier = Modifier.padding(20.dp)
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -417,22 +458,25 @@ private fun WeeklyOverviewSection(
         Text(
           text = "Weekly Activity",
           style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.5.sp
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp
           ),
           color = textColor
         )
 
         Text(
           text = "Hours / day",
-          style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
+          style = MaterialTheme.typography.labelSmall.copy(
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+          ),
           color = mutedColor
         )
       }
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // Minimal Vertical Bar Chart
+      // Vertical Bar Chart
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -448,6 +492,8 @@ private fun WeeklyOverviewSection(
             label = "bar_height"
           )
 
+          val isActive = day.isHighlight || day.hours > 0
+
           Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom,
@@ -458,27 +504,22 @@ private fun WeeklyOverviewSection(
               Text(
                 text = labelText,
                 style = MaterialTheme.typography.labelSmall.copy(
-                  fontSize = 10.sp,
+                  fontSize = 11.sp,
                   fontWeight = FontWeight.SemiBold
                 ),
-                color = if (day.isHighlight) textColor else mutedColor,
+                color = textColor,
                 modifier = Modifier.padding(bottom = 4.dp)
               )
             } else {
-              Spacer(modifier = Modifier.height(14.dp))
+              Spacer(modifier = Modifier.height(16.dp))
             }
 
             Box(
               modifier = Modifier
                 .width(16.dp)
-                .height((90 * animatedHeightFraction).dp)
+                .height((85 * animatedHeightFraction).dp)
                 .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                .background(
-                  if (day.isHighlight) SignatureNeonLime
-                  else if (day.hours > 0) {
-                    if (isNightMode) Color.White else DarkButtonCharcoal
-                  } else barBg
-                )
+                .background(if (isActive) barActiveBg else barEmptyBg)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -486,8 +527,8 @@ private fun WeeklyOverviewSection(
             Text(
               text = day.dayLabel,
               style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = if (day.isHighlight) FontWeight.Bold else FontWeight.Medium,
-                fontSize = 11.sp
+                fontWeight = if (day.isHighlight) FontWeight.SemiBold else FontWeight.Medium,
+                fontSize = 12.sp
               ),
               color = if (day.isHighlight) textColor else mutedColor
             )
@@ -507,7 +548,7 @@ private fun KeyMetricsSection(
 ) {
   Row(
     modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp)
+    horizontalArrangement = Arrangement.spacedBy(10.dp)
   ) {
     MetricItemCard(
       value = "$sessionsCount",
@@ -539,38 +580,41 @@ private fun MetricItemCard(
   isNightMode: Boolean,
   modifier: Modifier = Modifier
 ) {
-  val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val textColor = if (isNightMode) Color.White else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
+  val surfaceColor = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
+  val textColor = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
 
   Surface(
     modifier = modifier,
-    shape = RoundedCornerShape(14.dp),
+    shape = RoundedCornerShape(28.dp),
     color = surfaceColor,
-    border = BorderStroke(1.dp, borderColor)
+    border = BorderStroke(1.dp, borderColor),
+    shadowElevation = 0.dp
   ) {
     Column(
-      modifier = Modifier.padding(vertical = 14.dp, horizontal = 8.dp),
+      modifier = Modifier.padding(vertical = 18.dp, horizontal = 10.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
       Text(
         text = value,
         style = MaterialTheme.typography.titleMedium.copy(
           fontWeight = FontWeight.Bold,
-          fontSize = 16.sp
+          fontSize = 22.sp
         ),
         color = textColor
       )
 
-      Spacer(modifier = Modifier.height(2.dp))
+      Spacer(modifier = Modifier.height(4.dp))
 
       Text(
         text = label,
         style = MaterialTheme.typography.labelSmall.copy(
-          fontSize = 11.sp
+          fontWeight = FontWeight.Medium,
+          fontSize = 14.sp
         ),
-        color = mutedColor
+        color = mutedColor,
+        maxLines = 1
       )
     }
   }
@@ -582,21 +626,22 @@ private fun ConsistencySection(
   totalDays: Int,
   isNightMode: Boolean
 ) {
-  val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val textColor = if (isNightMode) Color.White else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
+  val surfaceColor = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
+  val textColor = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
 
   Surface(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
+    shape = RoundedCornerShape(28.dp),
     color = surfaceColor,
-    border = BorderStroke(1.dp, borderColor)
+    border = BorderStroke(1.dp, borderColor),
+    shadowElevation = 0.dp
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(16.dp),
+        .padding(20.dp),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically
     ) {
@@ -604,29 +649,30 @@ private fun ConsistencySection(
         Text(
           text = "Consistency",
           style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp
           ),
           color = textColor
         )
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(3.dp))
 
         Text(
           text = "You showed up this week.",
           style = MaterialTheme.typography.bodySmall.copy(
-            fontSize = 12.5.sp
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp
           ),
           color = mutedColor
         )
       }
 
       Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = if (isNightMode) DarkContainerNeutral else SignatureNeonLime
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFDCE5EE)
       ) {
         Row(
-          modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -634,15 +680,15 @@ private fun ConsistencySection(
             modifier = Modifier
               .size(6.dp)
               .clip(CircleShape)
-              .background(if (isNightMode) SignatureNeonLime else DarkButtonCharcoal)
+              .background(Color(0xFF1A1A1F))
           )
           Text(
             text = "$activeDays of $totalDays days",
             style = MaterialTheme.typography.labelMedium.copy(
               fontWeight = FontWeight.SemiBold,
-              fontSize = 12.sp
+              fontSize = 13.sp
             ),
-            color = if (isNightMode) Color.White else DarkButtonCharcoal
+            color = Color(0xFF1A1A1F)
           )
         }
       }
@@ -655,35 +701,35 @@ private fun InsightSection(
   message: String,
   isNightMode: Boolean
 ) {
-  val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val textColor = if (isNightMode) Color.White else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-  val containerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
+  val surfaceColor = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
+  val textColor = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
 
   Surface(
     modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(16.dp),
+    shape = RoundedCornerShape(28.dp),
     color = surfaceColor,
-    border = BorderStroke(1.dp, borderColor)
+    border = BorderStroke(1.dp, borderColor),
+    shadowElevation = 0.dp
   ) {
     Row(
-      modifier = Modifier.padding(14.dp),
+      modifier = Modifier.padding(18.dp),
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(12.dp)
+      horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
       Box(
         modifier = Modifier
-          .size(34.dp)
+          .size(40.dp)
           .clip(CircleShape)
-          .background(containerColor),
+          .background(Color(0xFFDCE5EE)),
         contentAlignment = Alignment.Center
       ) {
         Icon(
-          imageVector = Icons.Outlined.Lightbulb,
+          imageVector = ThinLightbulbOutlineIcon,
           contentDescription = null,
-          tint = if (isNightMode) SignatureNeonLime else textColor,
-          modifier = Modifier.size(16.dp)
+          tint = Color(0xFF1A1A1F),
+          modifier = Modifier.size(18.dp)
         )
       }
 
@@ -691,18 +737,19 @@ private fun InsightSection(
         Text(
           text = "FOCUS INSIGHT",
           style = MaterialTheme.typography.labelSmall.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 10.5.sp,
-            letterSpacing = 0.6.sp
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            letterSpacing = 0.08.em
           ),
           color = mutedColor
         )
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
           text = message,
           style = MaterialTheme.typography.bodySmall.copy(
-            fontSize = 12.5.sp,
-            lineHeight = 17.sp
+            fontWeight = FontWeight.Medium,
+            fontSize = 16.sp,
+            lineHeight = 22.sp
           ),
           color = textColor
         )

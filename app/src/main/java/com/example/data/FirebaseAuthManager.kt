@@ -43,134 +43,86 @@ class FirebaseAuthManager {
     val errorMessage: String? = null
   )
 
-  fun signUp(email: String, pass: String): AuthResult {
-    Log.i(TAG, "[SIGNUP_START] Creating Firebase Auth account for email: $email")
-
-    val jsonBody = JSONObject().apply {
-      put("email", email)
-      put("password", pass)
-      put("returnSecureToken", true)
-    }
-
-    val requestBody = jsonBody.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-
-    val request = Request.Builder()
-      .url(SIGN_UP_URL)
-      .addHeader("Content-Type", "application/json")
-      .post(requestBody)
-      .build()
-
-    return try {
-      client.newCall(request).execute().use { response ->
-        val statusCode = response.code
-        val responseBodyString = response.body?.string() ?: ""
-
-        if (response.isSuccessful) {
-          val json = JSONObject(responseBodyString)
-          val userId = json.optString("localId")
-          val returnedEmail = json.optString("email", email)
-          val idToken = json.optString("idToken")
-          val refreshToken = json.optString("refreshToken")
-
-          Log.i(TAG, "[SIGNUP_SUCCESS] Firebase account created for user ID: $userId")
-
-          // Send verification email
-          sendEmailVerification(idToken)
-
-          AuthResult(
-            success = true,
-            isEmailUnverified = true,
-            userId = userId,
-            email = returnedEmail,
-            idToken = idToken,
-            refreshToken = refreshToken,
-            errorMessage = "We have sent you a verification email to $returnedEmail. Please verify it and log in."
-          )
+  suspend fun signUp(email: String, pass: String): AuthResult = suspendCancellableCoroutine { continuation ->
+    Log.i(TAG, "[SIGNUP_START] Creating Firebase account for email: $email using SDK")
+    val auth = FirebaseAuth.getInstance()
+    auth.createUserWithEmailAndPassword(email, pass)
+      .addOnSuccessListener { result ->
+        val user = result.user
+        if (user != null) {
+          Log.i(TAG, "[SIGNUP_SUCCESS] Firebase account created: ${user.uid}")
+          user.sendEmailVerification()
+          user.getIdToken(false).addOnSuccessListener { tokenResult ->
+             continuation.resume(AuthResult(
+                success = true,
+                isEmailUnverified = true,
+                userId = user.uid,
+                email = user.email,
+                idToken = tokenResult.token,
+                errorMessage = "We have sent you a verification email to ${user.email}. Please verify it and log in."
+             ))
+          }.addOnFailureListener {
+             continuation.resume(AuthResult(success = true, isEmailUnverified = true, userId = user.uid, email = user.email))
+          }
         } else {
-          val parsedMsg = parseSignUpError(responseBodyString)
-          Log.e(TAG, "[SIGNUP_FAILURE] Status $statusCode: $parsedMsg")
-          AuthResult(
-            success = false,
-            errorMessage = parsedMsg
-          )
+          continuation.resume(AuthResult(success = false, errorMessage = "Failed to create user"))
         }
       }
-    } catch (e: Exception) {
-      Log.e(TAG, "[SIGNUP_EXCEPTION] Error: ${e.localizedMessage}", e)
-      AuthResult(
-        success = false,
-        errorMessage = "Unable to connect to authentication service. Please check your internet connection."
-      )
-    }
+      .addOnFailureListener { e ->
+        Log.e(TAG, "[SIGNUP_FAILURE] Error: ${e.localizedMessage}")
+        continuation.resume(AuthResult(success = false, errorMessage = parseAuthError(e)))
+      }
   }
 
-  fun signIn(email: String, pass: String): AuthResult {
-    Log.i(TAG, "[LOGIN_START] Signing in Firebase Auth for email: $email")
-
-    val jsonBody = JSONObject().apply {
-      put("email", email)
-      put("password", pass)
-      put("returnSecureToken", true)
-    }
-
-    val requestBody = jsonBody.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-
-    val request = Request.Builder()
-      .url(SIGN_IN_URL)
-      .addHeader("Content-Type", "application/json")
-      .post(requestBody)
-      .build()
-
-    return try {
-      client.newCall(request).execute().use { response ->
-        val statusCode = response.code
-        val responseBodyString = response.body?.string() ?: ""
-
-        if (response.isSuccessful) {
-          val json = JSONObject(responseBodyString)
-          val userId = json.optString("localId")
-          val returnedEmail = json.optString("email", email)
-          val idToken = json.optString("idToken")
-          val refreshToken = json.optString("refreshToken")
-
-          Log.i(TAG, "[LOGIN_SUCCESS] Firebase logged in user ID: $userId")
-
-          val isVerified = checkEmailVerified(idToken)
-          if (!isVerified) {
-            sendEmailVerification(idToken)
-            Log.i(TAG, "[LOGIN_BLOCKED] User $returnedEmail email is not verified.")
-            return AuthResult(
+  suspend fun signIn(email: String, pass: String): AuthResult = suspendCancellableCoroutine { continuation ->
+    Log.i(TAG, "[LOGIN_START] Signing in Firebase for email: $email using SDK")
+    val auth = FirebaseAuth.getInstance()
+    auth.signInWithEmailAndPassword(email, pass)
+      .addOnSuccessListener { result ->
+        val user = result.user
+        if (user != null) {
+          if (!user.isEmailVerified) {
+            user.sendEmailVerification()
+            Log.i(TAG, "[LOGIN_BLOCKED] Email not verified for ${user.email}")
+            continuation.resume(AuthResult(
               success = false,
               isEmailUnverified = true,
-              userId = userId,
-              email = returnedEmail,
-              errorMessage = "We have sent you a verification email to $returnedEmail. Please verify it and log in."
-            )
+              userId = user.uid,
+              email = user.email,
+              errorMessage = "We have sent you a verification email to ${user.email}. Please verify it and log in."
+            ))
+          } else {
+            user.getIdToken(false).addOnSuccessListener { tokenResult ->
+              continuation.resume(AuthResult(
+                success = true,
+                isEmailUnverified = false,
+                userId = user.uid,
+                email = user.email,
+                idToken = tokenResult.token
+              ))
+            }.addOnFailureListener {
+              continuation.resume(AuthResult(success = false, errorMessage = "Failed to get session token"))
+            }
           }
-
-          AuthResult(
-            success = true,
-            isEmailUnverified = false,
-            userId = userId,
-            email = returnedEmail,
-            idToken = idToken,
-            refreshToken = refreshToken
-          )
         } else {
-          val parsedMsg = parseSignInError(responseBodyString)
-          Log.e(TAG, "[LOGIN_FAILURE] Status $statusCode: $parsedMsg")
-          AuthResult(
-            success = false,
-            errorMessage = parsedMsg
-          )
+          continuation.resume(AuthResult(success = false, errorMessage = "Login failed"))
         }
       }
-    } catch (e: Exception) {
-      Log.e(TAG, "[LOGIN_EXCEPTION] Error: ${e.localizedMessage}", e)
-      AuthResult(
-        success = false,
-        errorMessage = "Unable to connect to authentication service. Please check your internet connection."
-      )
+      .addOnFailureListener { e ->
+        Log.e(TAG, "[LOGIN_FAILURE] Error: ${e.localizedMessage}")
+        continuation.resume(AuthResult(success = false, errorMessage = parseAuthError(e)))
+      }
+  }
+
+  private fun parseAuthError(e: Exception): String {
+    val msg = e.localizedMessage ?: "Authentication failed"
+    return when {
+      msg.contains("EMAIL_ALREADY_IN_USE", true) -> "User already exists. Please sign in"
+      msg.contains("INVALID_EMAIL", true) -> "Please enter a valid email address"
+      msg.contains("WEAK_PASSWORD", true) -> "Password is too weak"
+      msg.contains("USER_NOT_FOUND", true) || msg.contains("INVALID_LOGIN_CREDENTIALS", true) -> "Email or password is incorrect"
+      msg.contains("WRONG_PASSWORD", true) -> "Email or password is incorrect"
+      else -> "Authentication failed. Please try again."
     }
   }
 

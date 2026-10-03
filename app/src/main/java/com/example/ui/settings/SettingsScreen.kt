@@ -14,7 +14,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,24 +29,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.AddCircleOutline
-import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.HelpOutline
-import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsNone
-import androidx.compose.material.icons.outlined.PauseCircleOutline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Timer
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.Button
@@ -55,7 +46,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -70,12 +60,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.DarkButtonCharcoal
@@ -87,15 +79,11 @@ import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.LightCardSurface
 import com.example.ui.theme.LightContainerNeutral
 import com.example.ui.theme.LightPageBackground
-import com.example.ui.theme.LightSubtleBorder
-import com.example.ui.theme.LightTextPrimary
-import com.example.ui.theme.LightTextSecondary
-import com.example.ui.theme.SignatureNeonLime
 
 /**
  * Settings Screen:
- * Redesigned to match the minimal, clean, reference style with grouped rounded cards,
- * clear typography hierarchy, and a prominent bottom Log Out button.
+ * Restyled to match the Home page aesthetic: white 28px rounded cards with 1px #E3E9F0 borders,
+ * clear typography hierarchy, ice blue-gray accents (#DCE5EE), and soft neutral tones.
  */
 @Composable
 fun SettingsContent(
@@ -129,25 +117,21 @@ fun SettingsContent(
   var infoDialogTitle by remember { mutableStateOf<String?>(null) }
   var infoDialogContent by remember { mutableStateOf<String?>(null) }
 
-  val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-
-  // Strict thematic colors matching the reference style
-  val pageBg = if (isNightMode) DarkBackground else LightPageBackground
-  val groupBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val groupBorder = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val dividerColor = if (isNightMode) Color(0xFF252731) else Color(0xFFF0F0EE)
-  val primaryText = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val secondaryText = if (isNightMode) DarkTextSecondary else LightTextSecondary
-  val iconTint = if (isNightMode) Color(0xFFDCDDE2) else Color(0xFF222328)
-  val chevronTint = if (isNightMode) Color(0xFF676974) else Color(0xFFA5A6A3)
+  // Thematic colors matching Home design guidelines
+  val groupBg = if (isNightMode) DarkCardSurface else Color.White
+  val groupBorder = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
+  val dividerColor = if (isNightMode) Color(0xFF252731) else Color(0xFFE8EDF3)
+  val primaryText = if (isNightMode) DarkTextOffWhite else Color(0xFF1A1A1F)
+  val secondaryText = if (isNightMode) DarkTextSecondary else Color(0xFF8E96A3)
+  val iconTint = if (isNightMode) Color(0xFFDCDDE2) else Color(0xFF3A3A44)
+  val chevronTint = if (isNightMode) Color(0xFF676974) else Color(0xFFA9B4C2)
 
   val displayName = if (userName.isNotBlank()) userName else if (isLoggedIn) "Lock In User" else "Guest"
-  val avatarLetter = if (userName.isNotBlank()) userName.trim().firstOrNull()?.uppercase() ?: "" else ""
 
   Box(
     modifier = modifier
       .fillMaxSize()
-      .background(pageBg)
+      .background(Color.Transparent)
   ) {
     Column(
       modifier = Modifier
@@ -155,18 +139,18 @@ fun SettingsContent(
         .verticalScroll(rememberScrollState())
         .statusBarsPadding()
         .padding(horizontal = 20.dp)
-        .padding(bottom = 96.dp)
+        .padding(bottom = 130.dp) // Extra bottom padding for floating bottom nav
     ) {
       Spacer(modifier = Modifier.height(14.dp))
 
-      // 1. TOP HEADER
+      // 1. HEADLINE
       Text(
         text = "Settings",
         style = MaterialTheme.typography.headlineMedium.copy(
-          fontWeight = FontWeight.Bold,
-          fontSize = 30.sp,
-          lineHeight = 36.sp,
-          letterSpacing = (-0.5).sp
+          fontWeight = FontWeight.SemiBold,
+          fontSize = 32.sp,
+          lineHeight = 35.2.sp,
+          letterSpacing = (-0.02).em
         ),
         color = primaryText,
         modifier = Modifier.testTag("settings_header_title")
@@ -174,100 +158,24 @@ fun SettingsContent(
       Spacer(modifier = Modifier.height(2.dp))
       Text(
         text = "Customize your Lock In experience.",
-        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+        style = MaterialTheme.typography.bodyMedium.copy(
+          fontWeight = FontWeight.Medium,
+          fontSize = 16.sp
+        ),
         color = secondaryText
       )
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // 2. PROMINENT PROFILE / ACCOUNT CARD
-      Surface(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(20.dp))
-          .clickable { showEditNameDialog = true }
-          .testTag("profile_card"),
-        shape = RoundedCornerShape(20.dp),
-        color = groupBg,
-        border = BorderStroke(1.dp, groupBorder)
-      ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.weight(1f)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(SignatureNeonLime),
-              contentAlignment = Alignment.Center
-            ) {
-              if (avatarLetter.isNotEmpty()) {
-                Text(
-                  text = avatarLetter,
-                  style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp
-                  ),
-                  color = DarkButtonCharcoal
-                )
-              } else {
-                Icon(
-                  imageVector = Icons.Outlined.Person,
-                  contentDescription = "Profile",
-                  modifier = Modifier.size(24.dp),
-                  tint = DarkButtonCharcoal
-                )
-              }
-            }
-
-            Column {
-              Text(
-                text = displayName,
-                style = MaterialTheme.typography.titleMedium.copy(
-                  fontWeight = FontWeight.SemiBold,
-                  fontSize = 16.sp
-                ),
-                color = primaryText
-              )
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(
-                text = if (isLoggedIn && userEmail.isNotBlank()) "@${userEmail.substringBefore("@")}" else "Tap to edit name",
-                style = MaterialTheme.typography.bodySmall.copy(
-                  fontSize = 13.sp
-                ),
-                color = secondaryText
-              )
-            }
-          }
-
-          Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = "Edit name",
-            tint = chevronTint,
-            modifier = Modifier.size(18.dp)
-          )
-        }
-      }
-
-      Spacer(modifier = Modifier.height(16.dp))
-
       // 3. GROUP 1: ACCOUNT-RELATED SETTINGS
       Surface(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+          .clip(RoundedCornerShape(28.dp)),
+        shape = RoundedCornerShape(28.dp),
         color = groupBg,
-        border = BorderStroke(1.dp, groupBorder)
+        border = BorderStroke(1.dp, groupBorder),
+        shadowElevation = 0.dp
       ) {
         Column(modifier = Modifier.fillMaxWidth()) {
           SettingsRowItem(
@@ -283,8 +191,8 @@ fun SettingsContent(
           )
 
           HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            thickness = 0.8.dp,
+            modifier = Modifier.padding(horizontal = 20.dp),
+            thickness = 1.dp,
             color = dividerColor
           )
 
@@ -308,10 +216,11 @@ fun SettingsContent(
       Surface(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+          .clip(RoundedCornerShape(28.dp)),
+        shape = RoundedCornerShape(28.dp),
         color = groupBg,
-        border = BorderStroke(1.dp, groupBorder)
+        border = BorderStroke(1.dp, groupBorder),
+        shadowElevation = 0.dp
       ) {
         Column(modifier = Modifier.fillMaxWidth()) {
           // Dark Mode Row
@@ -331,9 +240,11 @@ fun SettingsContent(
                 onCheckedChange = { onNightModeToggle(it) },
                 colors = SwitchDefaults.colors(
                   checkedThumbColor = Color.White,
-                  checkedTrackColor = SignatureNeonLime,
+                  checkedTrackColor = Color(0xFF1A1A1F),
+                  checkedBorderColor = Color.Transparent,
                   uncheckedThumbColor = Color.White,
-                  uncheckedTrackColor = if (isNightMode) Color(0xFF333540) else Color(0xFFDFE0DF)
+                  uncheckedTrackColor = Color(0xFFDCE5EE),
+                  uncheckedBorderColor = Color(0xFFC9D4E0)
                 ),
                 modifier = Modifier.testTag("appearance_mode_switch")
               )
@@ -341,8 +252,8 @@ fun SettingsContent(
           )
 
           HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            thickness = 0.8.dp,
+            modifier = Modifier.padding(horizontal = 20.dp),
+            thickness = 1.dp,
             color = dividerColor
           )
 
@@ -367,10 +278,11 @@ fun SettingsContent(
       Surface(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+          .clip(RoundedCornerShape(28.dp)),
+        shape = RoundedCornerShape(28.dp),
         color = groupBg,
-        border = BorderStroke(1.dp, groupBorder)
+        border = BorderStroke(1.dp, groupBorder),
+        shadowElevation = 0.dp
       ) {
         Column(modifier = Modifier.fillMaxWidth()) {
           // Reset App
@@ -394,10 +306,11 @@ fun SettingsContent(
       Surface(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+          .clip(RoundedCornerShape(28.dp)),
+        shape = RoundedCornerShape(28.dp),
         color = groupBg,
-        border = BorderStroke(1.dp, groupBorder)
+        border = BorderStroke(1.dp, groupBorder),
+        shadowElevation = 0.dp
       ) {
         Column(modifier = Modifier.fillMaxWidth()) {
           SettingsRowItem(
@@ -416,8 +329,8 @@ fun SettingsContent(
           )
 
           HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            thickness = 0.8.dp,
+            modifier = Modifier.padding(horizontal = 20.dp),
+            thickness = 1.dp,
             color = dividerColor
           )
 
@@ -437,8 +350,8 @@ fun SettingsContent(
           )
 
           HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            thickness = 0.8.dp,
+            modifier = Modifier.padding(horizontal = 20.dp),
+            thickness = 1.dp,
             color = dividerColor
           )
 
@@ -460,19 +373,22 @@ fun SettingsContent(
       }
 
       if (isLoggedIn) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // 7. SEPARATE PROMINENT SIGN OUT BUTTON AT BOTTOM (Matching Reference Style)
+        // 7. SEPARATE PROMINENT SIGN OUT BUTTON AT BOTTOM
+        val signOutBg = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+        val signOutContent = if (isNightMode) Color(0xFF1A1A1F) else Color.White
+
         Surface(
           modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .clip(RoundedCornerShape(26.dp))
+            .height(56.dp)
+            .clip(CircleShape)
             .clickable { showLogoutConfirmation = true }
             .testTag("settings_logout_row"),
-          shape = RoundedCornerShape(26.dp),
-          color = Color.White,
-          border = if (isNightMode) null else BorderStroke(1.dp, groupBorder)
+          shape = CircleShape,
+          color = signOutBg,
+          shadowElevation = 0.dp
         ) {
           Row(
             modifier = Modifier.fillMaxSize(),
@@ -482,29 +398,32 @@ fun SettingsContent(
             Icon(
               imageVector = Icons.AutoMirrored.Outlined.Logout,
               contentDescription = "Sign Out",
-              tint = Color(0xFFD93838),
-              modifier = Modifier.size(18.dp)
+              tint = signOutContent,
+              modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = "Sign Out",
               style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 17.sp
               ),
-              color = Color(0xFFD93838)
+              color = signOutContent
             )
           }
         }
       }
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
       // App version footer
       Text(
         text = "Lock In v1.0.0",
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-        color = secondaryText.copy(alpha = 0.6f),
+        style = MaterialTheme.typography.bodySmall.copy(
+          fontWeight = FontWeight.Medium,
+          fontSize = 13.sp
+        ),
+        color = secondaryText.copy(alpha = 0.7f),
         modifier = Modifier.align(Alignment.CenterHorizontally)
       )
     }
@@ -607,7 +526,7 @@ private fun SettingsRowItem(
       .fillMaxWidth()
       .then(clickModifier)
       .then(tagModifier)
-      .padding(horizontal = 16.dp, vertical = 15.dp),
+      .padding(horizontal = 20.dp, vertical = 18.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween
   ) {
@@ -620,24 +539,25 @@ private fun SettingsRowItem(
         imageVector = icon,
         contentDescription = null,
         tint = iconTint,
-        modifier = Modifier.size(20.dp)
+        modifier = Modifier.size(22.dp)
       )
 
       Column {
         Text(
           text = title,
           style = MaterialTheme.typography.bodyLarge.copy(
-            fontWeight = FontWeight.Medium,
-            fontSize = 15.sp
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 17.sp
           ),
           color = primaryText
         )
         if (!subtitle.isNullOrBlank()) {
-          Spacer(modifier = Modifier.height(1.dp))
+          Spacer(modifier = Modifier.height(2.dp))
           Text(
             text = subtitle,
             style = MaterialTheme.typography.bodySmall.copy(
-              fontSize = 12.5.sp
+              fontWeight = FontWeight.Normal,
+              fontSize = 15.sp
             ),
             color = secondaryText
           )
@@ -652,13 +572,11 @@ private fun SettingsRowItem(
         imageVector = Icons.Outlined.ChevronRight,
         contentDescription = null,
         tint = chevronTint,
-        modifier = Modifier.size(18.dp)
+        modifier = Modifier.size(20.dp)
       )
     }
   }
 }
-
-
 
 @Composable
 private fun InfoDialog(
@@ -667,15 +585,15 @@ private fun InfoDialog(
   isNightMode: Boolean,
   onDismiss: () -> Unit
 ) {
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val secondaryText = if (isNightMode) DarkTextSecondary else LightTextSecondary
+  val cardBg = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
+  val textColor = Color(0xFF1A1A1F)
+  val secondaryText = Color(0xFF8E96A3)
 
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.Black.copy(alpha = 0.55f))
+      .background(Color(0x73141A26))
       .clickable(onClick = onDismiss),
     contentAlignment = Alignment.Center
   ) {
@@ -683,48 +601,55 @@ private fun InfoDialog(
       modifier = Modifier
         .padding(horizontal = 28.dp)
         .fillMaxWidth()
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
+        )
         .clickable(enabled = false) {},
-      shape = RoundedCornerShape(20.dp),
-      color = cardBg,
-      border = BorderStroke(1.dp, borderColor)
+      shape = RoundedCornerShape(24.dp),
+      color = Color.White,
+      shadowElevation = 0.dp
     ) {
       Column(
-        modifier = Modifier.padding(22.dp)
+        modifier = Modifier.padding(28.dp)
       ) {
         Text(
           text = title,
           style = MaterialTheme.typography.titleMedium.copy(
             fontWeight = FontWeight.Bold,
-            fontSize = 17.sp
+            fontSize = 20.sp
           ),
           color = textColor
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
           text = content,
-          style = MaterialTheme.typography.bodySmall.copy(
-            fontSize = 13.sp,
-            lineHeight = 19.sp
+          style = MaterialTheme.typography.bodyMedium.copy(
+            fontSize = 15.sp,
+            fontWeight = FontWeight.W400,
+            lineHeight = 21.sp
           ),
           color = secondaryText
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
           onClick = onDismiss,
           modifier = Modifier
             .fillMaxWidth()
-            .height(42.dp),
-          shape = RoundedCornerShape(12.dp),
+            .height(52.dp),
+          shape = CircleShape,
           colors = ButtonDefaults.buttonColors(
-            containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-            contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
+            containerColor = Color(0xFF1A1A1F),
+            contentColor = Color.White
           )
         ) {
-          Text("Got it", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+          Text("Got it", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.W600, fontSize = 16.sp))
         }
       }
     }
@@ -737,111 +662,19 @@ private fun ResetConfirmationDialog(
   onDismiss: () -> Unit,
   onConfirmReset: () -> Unit
 ) {
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-
-  Box(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(Color.Black.copy(alpha = 0.55f))
-      .clickable(onClick = onDismiss),
-    contentAlignment = Alignment.Center
-  ) {
-    Surface(
-      modifier = Modifier
-        .padding(horizontal = 28.dp)
-        .fillMaxWidth()
-        .clickable(enabled = false) {},
-      shape = RoundedCornerShape(20.dp),
-      color = cardBg,
-      border = BorderStroke(1.dp, borderColor)
-    ) {
-      Column(
-        modifier = Modifier.padding(22.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-      ) {
-        Box(
-          modifier = Modifier
-            .size(46.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFFFF0F0)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Outlined.WarningAmber,
-            contentDescription = null,
-            tint = Color(0xFFD93838),
-            modifier = Modifier.size(24.dp)
-          )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-          text = "Reset App Data?",
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 17.sp
-          ),
-          color = if (isNightMode) Color.White else LightTextPrimary,
-          textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-          text = "This will permanently delete your focus activity, history, and preferences.",
-          style = MaterialTheme.typography.bodySmall.copy(
-            fontSize = 13.sp,
-            lineHeight = 18.sp
-          ),
-          color = if (isNightMode) DarkTextSecondary else LightTextSecondary,
-          textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          Button(
-            onClick = onDismiss,
-            modifier = Modifier
-              .weight(1f)
-              .height(42.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-              containerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral,
-              contentColor = if (isNightMode) Color.White else LightTextPrimary
-            )
-          ) {
-            Text(
-              text = "Cancel",
-              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-            )
-          }
-
-          Button(
-            onClick = onConfirmReset,
-            modifier = Modifier
-              .weight(1f)
-              .height(42.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-              containerColor = Color(0xFFD93838),
-              contentColor = Color.White
-            )
-          ) {
-            Text(
-              text = "Reset",
-              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-            )
-          }
-        }
-      }
-    }
-  }
+  LockInConfirmationDialog(
+    icon = Icons.Outlined.WarningAmber,
+    iconColor = if (isNightMode) Color(0xFFDCDDE2) else Color(0xFF3A3A44),
+    iconBgColor = if (isNightMode) Color(0xFF252731) else Color(0xFFDCE5EE),
+    title = "Reset App Data?",
+    message = "This will permanently delete your focus activity, history, and preferences. This cannot be undone.",
+    confirmButtonText = "Reset",
+    confirmButtonColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+    confirmButtonTextColor = if (isNightMode) Color(0xFF1A1A1F) else Color.White,
+    isNightMode = isNightMode,
+    onDismiss = onDismiss,
+    onConfirm = onConfirmReset
+  )
 }
 
 @Composable
@@ -853,13 +686,13 @@ private fun EditNameDialog(
 ) {
   var nameInput by remember { mutableStateOf(currentName) }
   val isValid = nameInput.trim().isNotEmpty()
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  val cardBg = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
 
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.Black.copy(alpha = 0.55f))
+      .background(Color(0x73141A26))
       .clickable(onClick = onDismiss),
     contentAlignment = Alignment.Center
   ) {
@@ -867,24 +700,40 @@ private fun EditNameDialog(
       modifier = Modifier
         .padding(horizontal = 28.dp)
         .fillMaxWidth()
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
+        )
         .clickable(enabled = false) {},
-      shape = RoundedCornerShape(20.dp),
-      color = cardBg,
-      border = BorderStroke(1.dp, borderColor)
+      shape = RoundedCornerShape(24.dp),
+      color = Color.White,
+      shadowElevation = 0.dp
     ) {
       Column(
-        modifier = Modifier.padding(22.dp)
+        modifier = Modifier.padding(28.dp)
       ) {
         Text(
           text = "Edit Name",
           style = MaterialTheme.typography.titleMedium.copy(
             fontWeight = FontWeight.Bold,
-            fontSize = 17.sp
+            fontSize = 20.sp
           ),
-          color = if (isNightMode) Color.White else LightTextPrimary
+          color = Color(0xFF1A1A1F)
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+          text = "Update your profile name below.",
+          style = MaterialTheme.typography.bodyMedium.copy(
+            fontWeight = FontWeight.W400,
+            fontSize = 15.sp
+          ),
+          color = Color(0xFF8E96A3)
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         OutlinedTextField(
           value = nameInput,
@@ -894,44 +743,44 @@ private fun EditNameDialog(
           modifier = Modifier
             .fillMaxWidth()
             .testTag("edit_name_input"),
-          shape = RoundedCornerShape(12.dp),
+          shape = RoundedCornerShape(14.dp),
           colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral,
-            unfocusedContainerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral,
-            focusedBorderColor = if (isNightMode) SignatureNeonLime else Color.Black,
+            focusedContainerColor = Color(0xFFEEF1F5),
+            unfocusedContainerColor = Color(0xFFEEF1F5),
+            focusedBorderColor = Color(0xFF1A1A1F),
             unfocusedBorderColor = borderColor,
-            focusedLabelColor = if (isNightMode) SignatureNeonLime else Color.Black,
-            unfocusedLabelColor = if (isNightMode) DarkTextSecondary else LightTextSecondary,
-            focusedTextColor = if (isNightMode) Color.White else Color.Black,
-            unfocusedTextColor = if (isNightMode) Color.White else Color.Black,
-            cursorColor = if (isNightMode) SignatureNeonLime else Color.Black,
+            focusedLabelColor = Color(0xFF1A1A1F),
+            unfocusedLabelColor = Color(0xFF8E96A3),
+            focusedTextColor = Color(0xFF1A1A1F),
+            unfocusedTextColor = Color(0xFF1A1A1F),
+            cursorColor = Color(0xFF1A1A1F),
             selectionColors = TextSelectionColors(
-              handleColor = if (isNightMode) SignatureNeonLime else Color.Black,
-              backgroundColor = (if (isNightMode) SignatureNeonLime else Color.Black).copy(alpha = 0.2f)
+              handleColor = Color(0xFF1A1A1F),
+              backgroundColor = Color(0xFF1A1A1F).copy(alpha = 0.2f)
             )
           )
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Row(
           modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
+          horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           Button(
             onClick = onDismiss,
             modifier = Modifier
               .weight(1f)
-              .height(42.dp),
-            shape = RoundedCornerShape(12.dp),
+              .height(52.dp),
+            shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-              containerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral,
-              contentColor = if (isNightMode) Color.White else LightTextPrimary
+              containerColor = Color(0xFFEEF1F5),
+              contentColor = Color(0xFF1A1A1F)
             )
           ) {
             Text(
               text = "Cancel",
-              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.W600, fontSize = 16.sp)
             )
           }
 
@@ -945,16 +794,16 @@ private fun EditNameDialog(
             enabled = isValid,
             modifier = Modifier
               .weight(1f)
-              .height(42.dp),
-            shape = RoundedCornerShape(12.dp),
+              .height(52.dp),
+            shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-              containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-              contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
+              containerColor = Color(0xFF1A1A1F),
+              contentColor = Color.White
             )
           ) {
             Text(
               text = "Save",
-              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.W600, fontSize = 16.sp)
             )
           }
         }
@@ -969,107 +818,156 @@ fun LogoutConfirmationDialog(
   onDismiss: () -> Unit,
   onConfirmLogout: () -> Unit
 ) {
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  LockInConfirmationDialog(
+    icon = Icons.AutoMirrored.Outlined.Logout,
+    iconColor = if (isNightMode) Color(0xFFDCDDE2) else Color(0xFF3A3A44),
+    iconBgColor = if (isNightMode) Color(0xFF252731) else Color(0xFFDCE5EE),
+    title = "Sign Out?",
+    message = "Are you sure you want to sign out? Your account data will remain saved on your device.",
+    confirmButtonText = "Sign Out",
+    confirmButtonColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+    confirmButtonTextColor = if (isNightMode) Color(0xFF1A1A1F) else Color.White,
+    isNightMode = isNightMode,
+    onDismiss = onDismiss,
+    onConfirm = onConfirmLogout
+  )
+}
+
+@Composable
+private fun LockInConfirmationDialog(
+  icon: ImageVector,
+  iconColor: Color,
+  iconBgColor: Color,
+  title: String,
+  message: String,
+  confirmButtonText: String,
+  confirmButtonColor: Color,
+  confirmButtonTextColor: Color,
+  isNightMode: Boolean,
+  onDismiss: () -> Unit,
+  onConfirm: () -> Unit
+) {
+  val cardBg = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else Color(0xFFE3E9F0)
+  val textColor = Color(0xFF1A1A1F)
+  val secondaryText = Color(0xFF8E96A3)
 
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.Black.copy(alpha = 0.6f))
-      .clickable { onDismiss() },
+      .background(Color(0x73141A26))
+      .clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = onDismiss
+      ),
     contentAlignment = Alignment.Center
   ) {
     Surface(
       modifier = Modifier
         .padding(horizontal = 28.dp)
         .fillMaxWidth()
-        .clickable(enabled = false) {}
-        .testTag("logout_confirmation_dialog"),
-      shape = RoundedCornerShape(20.dp),
-      color = cardBg,
-      border = BorderStroke(1.dp, borderColor)
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
+        )
+        .clickable(enabled = false) {},
+      shape = RoundedCornerShape(24.dp),
+      color = Color.White,
+      shadowElevation = 0.dp
     ) {
       Column(
-        modifier = Modifier.padding(22.dp),
+        modifier = Modifier.padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
+        // Icon Circle
         Box(
           modifier = Modifier
-            .size(46.dp)
+            .size(48.dp)
             .clip(CircleShape)
-            .background(Color(0xFFFFF0F0)),
+            .background(iconBgColor),
           contentAlignment = Alignment.Center
         ) {
           Icon(
-            imageVector = Icons.AutoMirrored.Outlined.Logout,
+            imageVector = icon,
             contentDescription = null,
-            tint = Color(0xFFD93838),
-            modifier = Modifier.size(24.dp)
+            tint = iconColor,
+            modifier = Modifier.size(22.dp)
           )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
+        // Title
         Text(
-          text = "Sign out?",
+          text = title,
           style = MaterialTheme.typography.titleMedium.copy(
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
+            fontSize = 20.sp
           ),
-          color = if (isNightMode) Color.White else LightTextPrimary,
+          color = textColor,
           textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
+        // Message
         Text(
-          text = "Your account data will remain saved on your device.",
+          text = message,
           style = MaterialTheme.typography.bodySmall.copy(
-            fontSize = 13.sp,
-            lineHeight = 18.sp
+            fontSize = 15.sp,
+            lineHeight = 21.sp
           ),
-          color = if (isNightMode) DarkTextSecondary else LightTextSecondary,
+          color = secondaryText,
           textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
+        // Buttons
         Row(
           modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
+          horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           Button(
             onClick = onDismiss,
             modifier = Modifier
               .weight(1f)
-              .height(42.dp),
-            shape = RoundedCornerShape(12.dp),
+              .height(52.dp),
+            shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-              containerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral,
-              contentColor = if (isNightMode) Color.White else LightTextPrimary
+              containerColor = Color(0xFFEEF1F5),
+              contentColor = Color(0xFF1A1A1F)
             )
           ) {
             Text(
               text = "Cancel",
-              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+              style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.W600,
+                fontSize = 16.sp
+              )
             )
           }
 
           Button(
-            onClick = onConfirmLogout,
+            onClick = onConfirm,
             modifier = Modifier
               .weight(1f)
-              .height(42.dp)
-              .testTag("confirm_logout_button"),
-            shape = RoundedCornerShape(12.dp),
+              .height(52.dp),
+            shape = CircleShape,
             colors = ButtonDefaults.buttonColors(
-              containerColor = Color(0xFFD93838),
-              contentColor = Color.White
+              containerColor = confirmButtonColor,
+              contentColor = confirmButtonTextColor
             )
           ) {
             Text(
-              text = "Sign Out",
-              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+              text = confirmButtonText,
+              style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.W600,
+                fontSize = 16.sp
+              )
             )
           }
         }

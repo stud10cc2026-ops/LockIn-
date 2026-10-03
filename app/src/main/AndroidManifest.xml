@@ -28,6 +28,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.habits.HabitWidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.PushScroll">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name="com.example.service.FocusBlockerService"
             android:enabled="true"
@@ -54,10 +63,26 @@
             android:exported="false" />
 
         <receiver
-            android:name="com.example.widget.DailyGoalWidgetProvider"
+            android:name="com.example.ui.habits.HabitWidgetReceiver"
             android:enabled="true"
             android:exported="true"
-            android:label="@string/widget_daily_goal_name">
+            android:label="Habit Streak">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="BIND_HABIT_TO_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/habit_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.example.widget.ProgressIndicatorWidgetProvider"
+            android:enabled="true"
+            android:exported="true"
+            android:label="@string/widget_progress_indicator_name">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -68,7 +93,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/daily_goal_widget_info" />
+                android:resource="@xml/progress_indicator_widget_info" />
         </receiver>
     </application>
 

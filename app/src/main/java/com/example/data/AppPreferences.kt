@@ -70,6 +70,10 @@ class AppPreferences(private val context: Context) {
       editor.putBoolean("isCustomDuration", state.isCustomDuration)
       editor.putInt("customMinutes", state.customMinutes)
       editor.putBoolean("isNightMode", state.isNightMode)
+      editor.putString("themeMode", state.themeMode)
+      editor.putString("selectedCountry", state.selectedCountry)
+      editor.putString("selectedTimezoneId", state.selectedTimezoneId)
+      editor.putBoolean("hasConfirmedAutoTimezone", state.hasConfirmedAutoTimezone)
       editor.putInt("defaultDurationMinutes", state.defaultDurationMinutes)
       editor.putBoolean("allowPause", state.allowPause)
       editor.putBoolean("focusReminders", state.focusReminders)
@@ -159,6 +163,10 @@ class AppPreferences(private val context: Context) {
       val isCustomDuration = prefs.getBoolean("isCustomDuration", defaultState.isCustomDuration)
       val customMinutes = prefs.getInt("customMinutes", defaultState.customMinutes)
       val isNightMode = prefs.getBoolean("isNightMode", defaultState.isNightMode)
+      val themeMode = prefs.getString("themeMode", defaultState.themeMode) ?: defaultState.themeMode
+      val selectedCountry = prefs.getString("selectedCountry", defaultState.selectedCountry)
+      val selectedTimezoneId = prefs.getString("selectedTimezoneId", defaultState.selectedTimezoneId)
+      val hasConfirmedAutoTimezone = prefs.getBoolean("hasConfirmedAutoTimezone", defaultState.hasConfirmedAutoTimezone)
       val defaultDurationMinutes = prefs.getInt("defaultDurationMinutes", defaultState.defaultDurationMinutes)
       val allowPause = prefs.getBoolean("allowPause", defaultState.allowPause)
       val focusReminders = prefs.getBoolean("focusReminders", defaultState.focusReminders)
@@ -270,6 +278,10 @@ class AppPreferences(private val context: Context) {
         apps = apps,
         historyItems = historyItems,
         isNightMode = isNightMode,
+        themeMode = themeMode,
+        selectedCountry = selectedCountry,
+        selectedTimezoneId = selectedTimezoneId,
+        hasConfirmedAutoTimezone = hasConfirmedAutoTimezone,
         defaultDurationMinutes = defaultDurationMinutes,
         allowPause = allowPause,
         focusReminders = focusReminders,
@@ -328,7 +340,18 @@ class AppPreferences(private val context: Context) {
       }
       getPrefsForUser(null).edit().clear().apply()
       globalPrefs.edit().clear().apply()
+      // Also clear specifically named guest prefs if any
+      context.getSharedPreferences("lockin_guest_prefs", Context.MODE_PRIVATE).edit().clear().apply()
     } catch (_: Exception) {}
+  }
+
+  fun getGuestUiState(): HomeUiState {
+    return loadUiStateForUser(null, HomeUiState())
+  }
+
+  fun clearGuestData() {
+    getPrefsForUser(null).edit().clear().apply()
+    context.getSharedPreferences("lockin_guest_prefs", Context.MODE_PRIVATE).edit().clear().apply()
   }
 
   fun getLastActivityTimestamp(): Long {
@@ -555,6 +578,58 @@ class AppPreferences(private val context: Context) {
 
   fun clearDailyGoal() {
     saveDailyGoal(null)
+  }
+
+  fun getDailyFocusGoalMinutes(): Int {
+    val activeUid = getActiveUserId()
+    val prefs = getPrefsForUser(activeUid)
+    return if (prefs.getBoolean("has_saved_data", false)) {
+      prefs.getInt("dailyFocusGoalMinutes", 120)
+    } else {
+      globalPrefs.getInt("dailyFocusGoalMinutes", 120)
+    }
+  }
+
+  fun saveDailyFocusGoalMinutes(minutes: Int) {
+    try {
+      val activeUid = getActiveUserId()
+      val userPrefs = getPrefsForUser(activeUid)
+      userPrefs.edit().putInt("dailyFocusGoalMinutes", minutes).apply()
+      globalPrefs.edit().putInt("dailyFocusGoalMinutes", minutes).apply()
+    } catch (_: Exception) {}
+  }
+
+  fun getSelectedTimezoneId(): String? {
+    val activeUid = getActiveUserId()
+    val userPrefs = getPrefsForUser(activeUid)
+    return userPrefs.getString("selectedTimezoneId", null)
+  }
+
+  fun getCurrentLocalDate(): java.time.LocalDate {
+    val tzId = getSelectedTimezoneId()
+    return try {
+      if (tzId.isNullOrEmpty() || tzId == "DEVICE_DEFAULT") {
+        java.time.LocalDate.now()
+      } else {
+        java.time.LocalDate.now(java.time.ZoneId.of(tzId))
+      }
+    } catch (_: Exception) {
+      java.time.LocalDate.now()
+    }
+  }
+
+  fun hasConfirmedAutoTimezone(): Boolean {
+    val activeUid = getActiveUserId()
+    val prefs = getPrefsForUser(activeUid)
+    return prefs.getBoolean("hasConfirmedAutoTimezone", false)
+  }
+
+  fun setAutoTimezoneConfirmed(confirmed: Boolean) {
+    try {
+      val activeUid = getActiveUserId()
+      val prefs = getPrefsForUser(activeUid)
+      prefs.edit().putBoolean("hasConfirmedAutoTimezone", confirmed).apply()
+    } catch (_: Exception) {}
   }
 
   fun loadAppBlockItems(): List<AppBlockItem> {

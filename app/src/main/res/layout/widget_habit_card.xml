@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_widget_habit_black"
+    android:padding="20dp">
+
+    <!-- Top: Habit Name -->
+    <TextView
+        android:id="@+id/tv_habit_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Focus"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:includeFontPadding="false" />
+
+    <!-- Middle: Big Number + "days in a row" -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="9dp">
+
+        <TextView
+            android:id="@+id/tv_streak_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2"
+            android:textColor="#FFFFFF"
+            android:textSize="56sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="days"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="in a row"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:includeFontPadding="false" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Bottom: 27 Dots Grid (3 rows x 9 cols) -->
+    <GridLayout
+        android:id="@+id/grid_dots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="9"
+        android:rowCount="3"
+        android:layout_gravity="center_horizontal">
+
+        <!-- Row 0 -->
+        <ImageView android:id="@+id/dot_0" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_1" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_2" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_3" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_4" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_5" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_6" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_7" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_8" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="0dp" android:layout_marginBottom="6dp" />
+
+        <!-- Row 1 -->
+        <ImageView android:id="@+id/dot_9" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_10" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_11" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_12" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_13" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_14" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_15" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_16" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="6dp" />
+        <ImageView android:id="@+id/dot_17" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="0dp" android:layout_marginBottom="6dp" />
+
+        <!-- Row 2 -->
+        <ImageView android:id="@+id/dot_18" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_19" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_20" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_21" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_22" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_23" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_24" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_25" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="6dp" android:layout_marginBottom="0dp" />
+        <ImageView android:id="@+id/dot_26" android:layout_width="8dp" android:layout_height="8dp" android:src="@drawable/ic_dot_inactive_grey" android:layout_marginEnd="0dp" android:layout_marginBottom="0dp" />
+    </GridLayout>
+
+</LinearLayout>

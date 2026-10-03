@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -53,6 +54,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -76,8 +78,6 @@ import com.example.ui.theme.LightPageBackground
 import com.example.ui.theme.LightSubtleBorder
 import com.example.ui.theme.LightTextPrimary
 import com.example.ui.theme.LightTextSecondary
-import com.example.ui.theme.SignatureLimeDarkText
-import com.example.ui.theme.SignatureNeonLime
 
 @Composable
 fun AccountScreen(
@@ -91,7 +91,9 @@ fun AccountScreen(
   onLogin: (String, String) -> String?,
   onSendPasswordReset: suspend (String) -> Pair<Boolean, String>,
   onLogout: () -> Unit,
-  onUpdateName: (String) -> Unit
+  onUpdateName: (String) -> Unit,
+  onManualSync: () -> Unit = {},
+  modifier: Modifier = Modifier
 ) {
   val coroutineScope = rememberCoroutineScope()
   var isSendingReset by remember { mutableStateOf(false) }
@@ -104,8 +106,7 @@ fun AccountScreen(
   var successMessage by remember { mutableStateOf<String?>(null) }
   var isPasswordResetSuccess by remember { mutableStateOf(false) }
   var showLogoutConfirmation by remember { mutableStateOf(false) }
-  var isEditingName by remember { mutableStateOf(false) }
-  var editNameInput by remember { mutableStateOf(userName) }
+  var showEditNameDialog by remember { mutableStateOf(false) }
   var unverifiedEmail by remember { mutableStateOf("") }
   var verificationMsg by remember { mutableStateOf("") }
 
@@ -115,14 +116,14 @@ fun AccountScreen(
   val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
   val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
   val inputContainer = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
-  val inputFocusedBorder = if (isNightMode) SignatureNeonLime else Color.Black
-  val inputFocusedLabel = if (isNightMode) SignatureNeonLime else Color.Black
   val inputTextColor = if (isNightMode) Color.White else Color.Black
-  val inputCursorColor = if (isNightMode) SignatureNeonLime else Color.Black
-  val inputHandleColor = if (isNightMode) SignatureNeonLime else Color.Black
+  val inputFocusedBorder = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+  val inputFocusedLabel = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+  val inputCursorColor = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+  val inputHandleColor = if (isNightMode) Color.White else Color(0xFF1A1A1F)
 
   Surface(
-    modifier = Modifier.fillMaxSize(),
+    modifier = modifier.fillMaxSize(),
     color = bgColor
   ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -133,20 +134,19 @@ fun AccountScreen(
           .navigationBarsPadding()
           .imePadding()
       ) {
-        // TOP APP BAR
-        Row(
+        // TOP APP BAR (Back Button)
+        Box(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
+            .padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 2.dp),
+          contentAlignment = Alignment.CenterStart
         ) {
           Box(
             modifier = Modifier
-              .size(38.dp)
+              .size(44.dp)
               .clip(CircleShape)
-              .background(cardBg)
-              .border(1.dp, borderColor, CircleShape)
+              .background(if (isNightMode) Color(0xFF282B33) else Color.White)
+              .border(1.5.dp, if (isNightMode) Color(0xFF3E4452) else Color(0xFFEEF1F5), CircleShape)
               .clickable { onBackClick() }
               .testTag("account_back_button"),
             contentAlignment = Alignment.Center
@@ -154,29 +154,44 @@ fun AccountScreen(
             Icon(
               imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
               contentDescription = "Back",
-              tint = textColor,
-              modifier = Modifier.size(18.dp)
+              tint = if (isNightMode) Color.White else Color(0xFF3A4150),
+              modifier = Modifier.size(20.dp)
             )
           }
-
-          Text(
-            text = "Account",
-            style = MaterialTheme.typography.titleLarge.copy(
-              fontWeight = FontWeight.Bold,
-              fontSize = 18.sp
-            ),
-            color = textColor
-          )
-
-          Spacer(modifier = Modifier.width(38.dp))
         }
 
         Column(
           modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .padding(horizontal = 24.dp)
         ) {
+          // Left-aligned Headline
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(top = 10.dp, bottom = 24.dp)
+          ) {
+            Text(
+              text = "Account",
+              style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.W600,
+                fontSize = 32.sp,
+                letterSpacing = (-0.02).sp
+              ),
+              color = textColor
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+              text = "Manage your profile and sign-in.",
+              style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.W500,
+                fontSize = 16.sp
+              ),
+              color = mutedColor
+            )
+          }
+
           if (!isLoggedIn || currentMode == "CREATE_PASSWORD") {
             // =========================================
             // LOGGED OUT / SETUP STATE
@@ -230,13 +245,13 @@ fun AccountScreen(
                     modifier = Modifier
                       .fillMaxWidth()
                       .clip(RoundedCornerShape(12.dp)),
-                    color = SignatureNeonLime.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, SignatureNeonLime.copy(alpha = 0.4f))
+                    color = Color(0xFFDCE5EE),
+                    border = BorderStroke(1.dp, Color(0xFFC9D4E0))
                   ) {
                     Text(
                       text = successMessage!!,
                       style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                      color = if (isNightMode) SignatureNeonLime else SignatureLimeDarkText,
+                      color = Color(0xFF1A1A1F),
                       modifier = Modifier.padding(12.dp),
                       textAlign = TextAlign.Center
                     )
@@ -273,8 +288,8 @@ fun AccountScreen(
                           },
                           shape = RoundedCornerShape(8.dp),
                           colors = ButtonDefaults.buttonColors(
-                            containerColor = SignatureNeonLime,
-                            contentColor = DarkButtonCharcoal
+                            containerColor = Color(0xFF1A1A1F),
+                            contentColor = Color.White
                           ),
                           modifier = Modifier.height(34.dp)
                         ) {
@@ -351,8 +366,8 @@ fun AccountScreen(
                         .testTag("account_send_reset_button"),
                       shape = RoundedCornerShape(12.dp),
                       colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                        contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
+                        containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+                        contentColor = if (isNightMode) Color.Black else Color.White
                       )
                     ) {
                       Text(
@@ -491,7 +506,7 @@ fun AccountScreen(
                       )
                     )
 
-                    PasswordRequirementsChecklist(
+                    AccountPasswordRequirementsChecklist(
                       passwordInput = passwordInput,
                       isNightMode = isNightMode
                     )
@@ -541,8 +556,8 @@ fun AccountScreen(
                         .testTag("account_continue_button"),
                       shape = RoundedCornerShape(12.dp),
                       colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                        contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
+                        containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+                        contentColor = if (isNightMode) Color.Black else Color.White
                       )
                     ) {
                       Text(
@@ -590,11 +605,11 @@ fun AccountScreen(
                           .fillMaxWidth()
                           .height(46.dp)
                           .testTag("account_login_after_reset_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                          containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                          contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-                        )
+                      shape = RoundedCornerShape(12.dp),
+                      colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+                        contentColor = if (isNightMode) Color.Black else Color.White
+                      )
                       ) {
                         Text(
                           text = "Sign In",
@@ -648,7 +663,7 @@ fun AccountScreen(
 
                       Spacer(modifier = Modifier.height(12.dp))
 
-                      PasswordRequirementsChecklist(
+                      AccountPasswordRequirementsChecklist(
                         passwordInput = passwordInput,
                         isNightMode = isNightMode
                       )
@@ -681,11 +696,11 @@ fun AccountScreen(
                           .fillMaxWidth()
                           .height(46.dp)
                           .testTag("account_reset_password_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                          containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                          contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-                        )
+                      shape = RoundedCornerShape(12.dp),
+                      colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+                        contentColor = if (isNightMode) Color.Black else Color.White
+                      )
                       ) {
                         Text(
                           text = "Reset Password",
@@ -703,7 +718,7 @@ fun AccountScreen(
                       Icon(
                         imageVector = Icons.Outlined.Email,
                         contentDescription = null,
-                        tint = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
+                        tint = Color(0xFF1A1A1F),
                         modifier = Modifier.size(44.dp)
                       )
 
@@ -738,11 +753,11 @@ fun AccountScreen(
                           .fillMaxWidth()
                           .height(46.dp)
                           .testTag("account_verify_email_login_button"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                          containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                          contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-                        )
+                      shape = RoundedCornerShape(12.dp),
+                      colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+                        contentColor = if (isNightMode) Color.Black else Color.White
+                      )
                       ) {
                         Text(
                           text = "Sign In",
@@ -878,8 +893,8 @@ fun AccountScreen(
                         .testTag("account_submit_button"),
                       shape = RoundedCornerShape(12.dp),
                       colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                        contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
+                        containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+                        contentColor = if (isNightMode) Color.Black else Color.White
                       )
                     ) {
                       Text(
@@ -922,24 +937,24 @@ fun AccountScreen(
             Surface(
               modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp)),
-              shape = RoundedCornerShape(16.dp),
+                .clip(RoundedCornerShape(28.dp)),
+              shape = RoundedCornerShape(28.dp),
               color = cardBg,
               border = BorderStroke(1.dp, borderColor)
             ) {
               Column(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .padding(20.dp),
+                  .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
               ) {
                 // USER PROFILE AVATAR
                 val avatarLetter = if (userName.isNotBlank()) userName.trim().take(1).uppercase() else ""
                 Box(
                   modifier = Modifier
-                    .size(68.dp)
+                    .size(88.dp)
                     .clip(CircleShape)
-                    .background(SignatureNeonLime),
+                    .background(Color(0xFFDCE5EE)),
                   contentAlignment = Alignment.Center
                 ) {
                   if (avatarLetter.isNotEmpty()) {
@@ -947,164 +962,157 @@ fun AccountScreen(
                       text = avatarLetter,
                       style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp
+                        fontSize = 32.sp
                       ),
-                      color = DarkButtonCharcoal
+                      color = Color(0xFF1A1A1F)
                     )
                   } else {
                     Icon(
                       imageVector = Icons.Outlined.Person,
                       contentDescription = "Profile",
-                      modifier = Modifier.size(32.dp),
-                      tint = DarkButtonCharcoal
+                      modifier = Modifier.size(38.dp),
+                      tint = Color(0xFF1A1A1F)
                     )
                   }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                if (!isEditingName) {
-                  Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                  ) {
-                    Text(
-                      text = userName,
-                      style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 19.sp
-                      ),
-                      color = textColor
-                    )
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.Center,
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Text(
+                    text = userName,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                      fontWeight = FontWeight.Bold,
+                      fontSize = 20.sp
+                    ),
+                    color = Color(0xFF1A1A1F)
+                  )
 
-                    Box(
-                      modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(inputContainer)
-                        .clickable {
-                          editNameInput = userName
-                          isEditingName = true
-                        },
-                      contentAlignment = Alignment.Center
-                    ) {
-                      Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = "Edit Name",
-                        tint = textColor,
-                        modifier = Modifier.size(14.dp)
-                      )
-                    }
-                  }
-                } else {
-                  Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                  ) {
-                    OutlinedTextField(
-                      value = editNameInput,
-                      onValueChange = { editNameInput = it.take(30) },
-                      singleLine = true,
-                      modifier = Modifier
-                        .weight(1f)
-                        .testTag("account_edit_name_input"),
-                      shape = RoundedCornerShape(10.dp),
-                      colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = inputContainer,
-                        unfocusedContainerColor = inputContainer,
-                        focusedBorderColor = inputFocusedBorder,
-                        unfocusedBorderColor = borderColor,
-                        focusedLabelColor = inputFocusedLabel,
-                        unfocusedLabelColor = mutedColor,
-                        focusedTextColor = inputTextColor,
-                        unfocusedTextColor = inputTextColor,
-                        cursorColor = inputCursorColor,
-                        selectionColors = TextSelectionColors(
-                          handleColor = inputHandleColor,
-                          backgroundColor = inputHandleColor.copy(alpha = 0.2f)
-                        )
-                      )
-                    )
+                  Spacer(modifier = Modifier.width(8.dp))
 
-                    Button(
-                      onClick = {
-                        if (editNameInput.trim().isNotEmpty()) {
-                          onUpdateName(editNameInput.trim())
-                        }
-                        isEditingName = false
+                  Box(
+                    modifier = Modifier
+                      .size(32.dp)
+                      .clip(CircleShape)
+                      .background(Color(0xFFEEF1F5))
+                      .clickable {
+                        showEditNameDialog = true
                       },
-                      shape = RoundedCornerShape(10.dp),
-                      colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                        contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-                      )
-                    ) {
-                      Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Outlined.Edit,
+                      contentDescription = "Edit Name",
+                      tint = Color(0xFF1A1A1F),
+                      modifier = Modifier.size(16.dp)
+                    )
                   }
                 }
 
                 if (userEmail.isNotEmpty()) {
-                  Spacer(modifier = Modifier.height(4.dp))
+                  Spacer(modifier = Modifier.height(6.dp))
                   Text(
                     text = userEmail,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                    color = mutedColor
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                      fontSize = 15.sp,
+                      fontWeight = FontWeight.W400
+                    ),
+                    color = Color(0xFF8E96A3),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                   )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // STATUS TAG
                 Surface(
                   shape = RoundedCornerShape(20.dp),
-                  color = SignatureNeonLime.copy(alpha = 0.15f),
-                  border = BorderStroke(1.dp, SignatureNeonLime.copy(alpha = 0.4f))
+                  color = Color(0xFFDCE5EE),
                 ) {
                   Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                   ) {
                     Icon(
                       imageVector = Icons.Outlined.CheckCircle,
                       contentDescription = null,
-                      tint = if (isNightMode) SignatureNeonLime else SignatureLimeDarkText,
-                      modifier = Modifier.size(14.dp)
+                      tint = Color(0xFF1A1A1F),
+                      modifier = Modifier.size(16.dp)
                     )
                     Text(
                       text = "Account Active & Synced",
-                      style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.5.sp),
-                      color = if (isNightMode) SignatureNeonLime else SignatureLimeDarkText
+                      style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.W600,
+                        fontSize = 12.5.sp
+                      ),
+                      color = Color(0xFF1A1A1F)
                     )
                   }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // MANUAL SYNC BUTTON
+                Button(
+                  onClick = { onManualSync() },
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .testTag("account_manual_sync_button"),
+                  shape = CircleShape,
+                  colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isNightMode) Color(0xFF282B33) else Color(0xFFEEF1F5),
+                    contentColor = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+                  )
+                ) {
+                  Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Outlined.Refresh,
+                    contentDescription = "Sync",
+                    modifier = Modifier.size(20.dp)
+                  )
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text(
+                    text = "Sync Cloud Data",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                      fontWeight = FontWeight.W600,
+                      fontSize = 15.sp
+                    )
+                  )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // LOGOUT BUTTON
                 Button(
                   onClick = { showLogoutConfirmation = true },
                   modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp)
+                    .height(52.dp)
                     .testTag("account_screen_logout_button"),
-                  shape = RoundedCornerShape(12.dp),
+                  shape = CircleShape,
                   colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFF0F0),
-                    contentColor = Color(0xFFD93838)
+                    containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+                    contentColor = if (isNightMode) Color(0xFF1A1A1F) else Color.White
                   )
                 ) {
                   Icon(
                     imageVector = Icons.Outlined.ExitToApp,
                     contentDescription = "Sign Out",
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                   )
-                  Spacer(modifier = Modifier.width(6.dp))
+                  Spacer(modifier = Modifier.width(8.dp))
                   Text(
                     text = "Sign Out",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    style = MaterialTheme.typography.titleMedium.copy(
+                      fontWeight = FontWeight.W600,
+                      fontSize = 15.sp
+                    )
                   )
                 }
               }
@@ -1125,6 +1133,212 @@ fun AccountScreen(
             onLogout()
           }
         )
+      }
+
+      // Edit Name Dialog
+      if (showEditNameDialog) {
+        EditNameDialog(
+          currentName = userName,
+          isNightMode = isNightMode,
+          onDismiss = { showEditNameDialog = false },
+          onSave = { newName ->
+            showEditNameDialog = false
+            onUpdateName(newName)
+          }
+        )
+      }
+    }
+  }
+}
+
+@Composable
+fun AccountPasswordRequirementsChecklist(
+  passwordInput: String,
+  isNightMode: Boolean
+) {
+  val reqLength = passwordInput.length >= 8
+  val reqLetter = passwordInput.any { it.isLetter() }
+  val reqNumber = passwordInput.any { it.isDigit() }
+
+  val activeColor = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+  val inactiveColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
+
+  Column(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(top = 8.dp, start = 4.dp, end = 4.dp),
+    verticalArrangement = Arrangement.spacedBy(6.dp)
+  ) {
+    RequirementRow(label = "At least 8 characters", isFulfilled = reqLength, activeColor = activeColor, inactiveColor = inactiveColor)
+    RequirementRow(label = "At least 1 letter", isFulfilled = reqLetter, activeColor = activeColor, inactiveColor = inactiveColor)
+    RequirementRow(label = "At least 1 number", isFulfilled = reqNumber, activeColor = activeColor, inactiveColor = inactiveColor)
+  }
+}
+
+@Composable
+private fun RequirementRow(
+  label: String,
+  isFulfilled: Boolean,
+  activeColor: Color,
+  inactiveColor: Color
+) {
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
+  ) {
+    Icon(
+      imageVector = if (isFulfilled) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+      contentDescription = null,
+      tint = if (isFulfilled) activeColor else inactiveColor,
+      modifier = Modifier.size(16.dp)
+    )
+    Text(
+      text = label,
+      style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+      color = if (isFulfilled) activeColor else inactiveColor
+    )
+  }
+}
+
+@Composable
+private fun EditNameDialog(
+  currentName: String,
+  isNightMode: Boolean,
+  onDismiss: () -> Unit,
+  onSave: (String) -> Unit
+) {
+  var nameInput by remember { mutableStateOf(currentName) }
+  val isValid = nameInput.trim().isNotEmpty()
+
+  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
+  val textColor = if (isNightMode) Color.White else LightTextPrimary
+  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
+  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  val inputContainer = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
+  val inputTextColor = if (isNightMode) Color.White else Color.Black
+  val inputFocusedBorder = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+  val inputFocusedLabel = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+  val inputCursorColor = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+  val inputHandleColor = if (isNightMode) Color.White else Color(0xFF1A1A1F)
+
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0x73141A26))
+      .clickable(onClick = onDismiss),
+    contentAlignment = Alignment.Center
+  ) {
+    Surface(
+      modifier = Modifier
+        .padding(horizontal = 28.dp)
+        .fillMaxWidth()
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = if (isNightMode) Color.Transparent else Color(0x2E141E32),
+          ambientColor = Color.Transparent
+        )
+        .clickable(enabled = false) {},
+      shape = RoundedCornerShape(24.dp),
+      color = cardBg,
+      shadowElevation = 0.dp
+    ) {
+      Column(
+        modifier = Modifier.padding(28.dp)
+      ) {
+        Text(
+          text = "Edit Name",
+          style = MaterialTheme.typography.titleMedium.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp
+          ),
+          color = textColor
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+          text = "Update your profile name below.",
+          style = MaterialTheme.typography.bodyMedium.copy(
+            fontWeight = FontWeight.W400,
+            fontSize = 15.sp
+          ),
+          color = mutedColor
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        OutlinedTextField(
+          value = nameInput,
+          onValueChange = { nameInput = it.take(30) },
+          label = { Text("Name") },
+          singleLine = true,
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("edit_name_input"),
+          shape = RoundedCornerShape(14.dp),
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = inputContainer,
+            unfocusedContainerColor = inputContainer,
+            focusedBorderColor = inputFocusedBorder,
+            unfocusedBorderColor = borderColor,
+            focusedLabelColor = inputFocusedLabel,
+            unfocusedLabelColor = mutedColor,
+            focusedTextColor = inputTextColor,
+            unfocusedTextColor = inputTextColor,
+            cursorColor = inputCursorColor,
+            selectionColors = TextSelectionColors(
+              handleColor = inputHandleColor,
+              backgroundColor = inputHandleColor.copy(alpha = 0.2f)
+            )
+          )
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+          Button(
+            onClick = onDismiss,
+            modifier = Modifier
+              .weight(1f)
+              .height(52.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = if (isNightMode) Color(0xFF282B33) else Color(0xFFEEF1F5),
+              contentColor = textColor
+            )
+          ) {
+            Text(
+              text = "Cancel",
+              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.W600, fontSize = 16.sp)
+            )
+          }
+
+          Button(
+            onClick = {
+              val trimmed = nameInput.trim()
+              if (trimmed.isNotEmpty()) {
+                onSave(trimmed)
+              }
+            },
+            enabled = isValid,
+            modifier = Modifier
+              .weight(1f)
+              .height(52.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+              contentColor = if (isNightMode) Color.Black else Color.White
+            )
+          ) {
+            Text(
+              text = "Save",
+              style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.W600, fontSize = 16.sp)
+            )
+          }
+        }
       }
     }
   }

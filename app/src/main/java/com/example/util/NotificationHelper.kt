@@ -60,6 +60,8 @@ object NotificationHelper {
     } catch (_: Exception) {}
   }
 
+  @androidx.annotation.OptIn(androidx.core.os.BuildCompat.PrereleaseSdkCheck::class)
+  @android.annotation.SuppressLint("MissingPermission")
   fun postSystemNotification(
     context: Context,
     title: String,

@@ -76,6 +76,7 @@ data class HomeUiState(
   val todaySessionsCount: Int = 0,
   val activeTab: Int = 0, // 0: Home, 1: History, 2: Stats, 3: Settings
   val isNightMode: Boolean = false,
+  val themeMode: String = "SYSTEM", // "LIGHT", "DARK", "SYSTEM"
   val defaultDurationMinutes: Int = 40,
   val allowPause: Boolean = true,
   val focusReminders: Boolean = true,
@@ -89,6 +90,7 @@ data class HomeUiState(
   val sessionCompletedReminder: Boolean = true,
   val focusSessionPausedReminder: Boolean = true,
   val reminderTimingMinutes: Int = 5,
+  val habitRemindersEnabled: Boolean = true,
   val isLoggedIn: Boolean = false,
   val userEmail: String = "",
   val userId: String? = null,
@@ -101,7 +103,15 @@ data class HomeUiState(
   val showPermissionPrompt: Boolean = false,
   val blockedAppName: String? = null,
   val showWelcomeIntro: Boolean = false,
-  val dailyGoal: DailyGoal? = null
+  val dailyGoal: DailyGoal? = null,
+  val dailyFocusGoalMinutes: Int = 120,
+  val isGoalDetailPageOpen: Boolean = false,
+  val currentViewMonth: java.time.YearMonth = java.time.YearMonth.now(),
+  val selectedCountry: String? = null,
+  val selectedTimezoneId: String? = null,
+  val hasConfirmedAutoTimezone: Boolean = false,
+  val isCountryPickerOpen: Boolean = false,
+  val timezoneConfirmationBannerVisible: Boolean = false
 ) {
   val isAllAppsBlocked: Boolean
     get() = apps.all { it.isBlocked }
@@ -151,6 +161,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   init {
+    firebaseAuthManager.ensureFirebaseInitialized(application)
     val loadedState = prefs.loadUiState(_uiState.value)
     val isSystemGranted = NotificationHelper.isSystemPermissionGranted(getApplication())
     val updatedHistory = loadedState.historyItems.map { item ->
@@ -167,6 +178,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
     val isFirstLaunch = prefs.isFirstLaunch()
     val savedGoal = prefs.getDailyGoal()
+    val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+    val hasConfirmedTz = prefs.hasConfirmedAutoTimezone()
+    val currentTzId = loadedState.selectedTimezoneId ?: "DEVICE_DEFAULT"
     val stateWithStats = recalculateTodayStats(
       loadedState.copy(
         showWelcomeIntro = isFirstLaunch,
@@ -174,8 +188,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         showFirstLaunchNotificationPrompt = false,
         notificationsEnabled = initialNotifEnabled,
         focusReminders = if (!isSystemGranted) false else loadedState.focusReminders,
+        habitRemindersEnabled = habitPrefs.isHabitRemindersGlobalEnabled(),
         appNotifications = refreshedNotifs,
-        dailyGoal = savedGoal
+        dailyGoal = savedGoal,
+        dailyFocusGoalMinutes = prefs.getDailyFocusGoalMinutes(),
+        hasConfirmedAutoTimezone = true,
+        timezoneConfirmationBannerVisible = false
       )
     )
     _uiState.value = stateWithStats
@@ -201,11 +219,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     try {
       val filter = android.content.IntentFilter(FocusBlockerService.ACTION_SESSION_STATE_CHANGED)
-      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-        getApplication<android.app.Application>().registerReceiver(sessionStateReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
-      } else {
-        getApplication<android.app.Application>().registerReceiver(sessionStateReceiver, filter)
-      }
+      androidx.core.content.ContextCompat.registerReceiver(
+        getApplication(),
+        sessionStateReceiver,
+        filter,
+        androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+      )
     } catch (_: Exception) {}
   }
 
@@ -238,44 +257,57 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
   private fun syncWithCloudData(userId: String, idToken: String?) {
     viewModelScope.launch(Dispatchers.IO) {
-      val cloudData = firebaseDataManager.loadUserData(userId, idToken)
-      if (cloudData != null) {
-        _uiState.update { current ->
-          if (current.userId != userId) return@update current
-          val updatedHistory = (cloudData.historyItems ?: current.historyItems).map { item ->
-            if (item.timestampMillis > 0L) {
-              item.copy(dateGroup = getDateGroupLabel(item.timestampMillis))
-            } else {
-              item
+      try {
+        val cloudData = firebaseDataManager.loadUserData(userId, idToken)
+        if (cloudData != null) {
+          _uiState.update { current ->
+            if (current.userId != userId) return@update current
+            val updatedHistory = (cloudData.historyItems ?: current.historyItems).map { item ->
+              if (item.timestampMillis > 0L) {
+                item.copy(dateGroup = getDateGroupLabel(item.timestampMillis))
+              } else {
+                item
+              }
             }
+            val updatedNotifs = cloudData.appNotifications ?: current.appNotifications
+            val newName = cloudData.userName?.ifBlank { null } ?: current.userName
+            val hasData = updatedHistory.isNotEmpty() || (cloudData.habits?.isNotEmpty() == true)
+            val merged = current.copy(
+              userName = newName,
+              userEmail = cloudData.userEmail ?: current.userEmail,
+              historyItems = updatedHistory,
+              appNotifications = updatedNotifs,
+              selectedDurationMinutes = cloudData.selectedDurationMinutes ?: current.selectedDurationMinutes,
+              isCustomDuration = cloudData.isCustomDuration ?: current.isCustomDuration,
+              customMinutes = cloudData.customMinutes ?: current.customMinutes,
+              isNightMode = cloudData.isNightMode ?: current.isNightMode,
+              defaultDurationMinutes = cloudData.defaultDurationMinutes ?: current.defaultDurationMinutes,
+              allowPause = cloudData.allowPause ?: current.allowPause,
+              focusReminders = cloudData.focusReminders ?: current.focusReminders,
+              notificationsEnabled = cloudData.notificationsEnabled ?: current.notificationsEnabled,
+              apps = cloudData.apps ?: current.apps,
+              dailyGoal = cloudData.dailyGoal ?: current.dailyGoal,
+              showWelcomeIntro = if (hasData) false else current.showWelcomeIntro
+            )
+            if (hasData) {
+                prefs.setFirstLaunchCompleted()
+            }
+            if (cloudData.dailyGoal != null && current.dailyGoal != cloudData.dailyGoal) {
+              prefs.saveDailyGoal(cloudData.dailyGoal)
+              com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
+            }
+            recalculateTodayStats(merged)
           }
-          val updatedNotifs = cloudData.appNotifications ?: current.appNotifications
-          val newName = cloudData.userName?.ifBlank { null } ?: current.userName
-          val merged = current.copy(
-            userName = newName,
-            userEmail = cloudData.userEmail ?: current.userEmail,
-            historyItems = updatedHistory,
-            appNotifications = updatedNotifs,
-            selectedDurationMinutes = cloudData.selectedDurationMinutes ?: current.selectedDurationMinutes,
-            isCustomDuration = cloudData.isCustomDuration ?: current.isCustomDuration,
-            customMinutes = cloudData.customMinutes ?: current.customMinutes,
-            isNightMode = cloudData.isNightMode ?: current.isNightMode,
-            defaultDurationMinutes = cloudData.defaultDurationMinutes ?: current.defaultDurationMinutes,
-            allowPause = cloudData.allowPause ?: current.allowPause,
-            focusReminders = cloudData.focusReminders ?: current.focusReminders,
-            notificationsEnabled = cloudData.notificationsEnabled ?: current.notificationsEnabled,
-            apps = cloudData.apps ?: current.apps,
-            dailyGoal = cloudData.dailyGoal ?: current.dailyGoal
-          )
-          if (cloudData.dailyGoal != null && current.dailyGoal != cloudData.dailyGoal) {
-            prefs.saveDailyGoal(cloudData.dailyGoal)
-            com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
-          }
-          recalculateTodayStats(merged)
+          prefs.saveUiState(_uiState.value)
+        } else if (userId.isNotBlank()) {
+          // Document exists but has no data? Or doc doesn't exist.
+          // loadUserData returns null if !userSnap.exists()
+          val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+          firebaseDataManager.saveUserData(userId, idToken, _uiState.value, habitPrefs.getHabits(), habitPrefs.getHabitLogs())
         }
-        prefs.saveUiState(_uiState.value)
-      } else if (userId.isNotBlank()) {
-        firebaseDataManager.saveUserData(userId, idToken, _uiState.value)
+      } catch (e: Exception) {
+        android.util.Log.e("HomeViewModel", "Sync failed: ${e.localizedMessage}")
+        // Do NOT saveUserData if we hit a permission error or other exception
       }
     }
   }
@@ -524,9 +556,63 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
   }
 
-  private fun getDateGroupLabel(timestampMillis: Long): String {
-    val sessionCal = Calendar.getInstance().apply { timeInMillis = timestampMillis }
-    val nowCal = Calendar.getInstance()
+  fun getTimeZone(): java.util.TimeZone {
+    val tzId = _uiState.value.selectedTimezoneId
+    return if (tzId.isNullOrEmpty() || tzId == "DEVICE_DEFAULT") {
+      java.util.TimeZone.getDefault()
+    } else {
+      java.util.TimeZone.getTimeZone(tzId)
+    }
+  }
+
+  fun openCountryPicker() {
+    _uiState.update { it.copy(isCountryPickerOpen = true) }
+  }
+
+  fun closeCountryPicker() {
+    _uiState.update { it.copy(isCountryPickerOpen = false) }
+  }
+
+  fun confirmAutoTimezone() {
+    _uiState.update { it.copy(hasConfirmedAutoTimezone = true, timezoneConfirmationBannerVisible = false) }
+    prefs.setAutoTimezoneConfirmed(true)
+    saveCurrentState()
+  }
+
+  fun dismissTimezoneBanner() {
+    _uiState.update { it.copy(timezoneConfirmationBannerVisible = false) }
+  }
+
+  fun setSelectedCountryAndTimezone(countryName: String?, timezoneId: String?) {
+    val isDefault = countryName.isNullOrEmpty() || countryName == "Use Device Default" || timezoneId == "DEVICE_DEFAULT"
+    val newCountry = if (isDefault) null else countryName
+    val newTzId = if (isDefault) null else timezoneId
+
+    _uiState.update { state ->
+      val updatedState = state.copy(
+        selectedCountry = newCountry,
+        selectedTimezoneId = newTzId,
+        hasConfirmedAutoTimezone = true,
+        timezoneConfirmationBannerVisible = false,
+        isCountryPickerOpen = false
+      )
+      prefs.setAutoTimezoneConfirmed(true)
+      val remappedHistory = updatedState.historyItems.map { item ->
+        if (item.timestampMillis > 0L) {
+          item.copy(dateGroup = getDateGroupLabelWithTz(item.timestampMillis, newTzId))
+        } else {
+          item
+        }
+      }
+      recalculateTodayStats(updatedState.copy(historyItems = remappedHistory))
+    }
+    saveCurrentState()
+  }
+
+  private fun getDateGroupLabelWithTz(timestampMillis: Long, tzId: String?): String {
+    val tz = if (tzId.isNullOrEmpty() || tzId == "DEVICE_DEFAULT") java.util.TimeZone.getDefault() else java.util.TimeZone.getTimeZone(tzId)
+    val sessionCal = Calendar.getInstance(tz).apply { timeInMillis = timestampMillis }
+    val nowCal = Calendar.getInstance(tz)
 
     val isToday = sessionCal.get(Calendar.YEAR) == nowCal.get(Calendar.YEAR) &&
                   sessionCal.get(Calendar.DAY_OF_YEAR) == nowCal.get(Calendar.DAY_OF_YEAR)
@@ -536,18 +622,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                       sessionCal.get(Calendar.DAY_OF_YEAR) == nowCal.get(Calendar.DAY_OF_YEAR) - 1
     if (isYesterday) return "Yesterday"
 
-    return SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(timestampMillis))
+    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    sdf.timeZone = tz
+    return sdf.format(Date(timestampMillis))
+  }
+
+  private fun getDateGroupLabel(timestampMillis: Long): String {
+    return getDateGroupLabelWithTz(timestampMillis, _uiState.value.selectedTimezoneId)
   }
 
   private fun isSameDay(millis1: Long, millis2: Long): Boolean {
-    val cal1 = Calendar.getInstance().apply { timeInMillis = millis1 }
-    val cal2 = Calendar.getInstance().apply { timeInMillis = millis2 }
+    val tz = getTimeZone()
+    val cal1 = Calendar.getInstance(tz).apply { timeInMillis = millis1 }
+    val cal2 = Calendar.getInstance(tz).apply { timeInMillis = millis2 }
     return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
   }
 
   private fun isSameWeek(sessionMillis: Long, nowCal: Calendar): Boolean {
-    val sCal = Calendar.getInstance().apply {
+    val tz = getTimeZone()
+    val sCal = Calendar.getInstance(tz).apply {
       firstDayOfWeek = Calendar.MONDAY
       timeInMillis = sessionMillis
     }
@@ -559,7 +653,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   private fun isSameMonth(sessionMillis: Long, nowCal: Calendar): Boolean {
-    val sCal = Calendar.getInstance().apply { timeInMillis = sessionMillis }
+    val tz = getTimeZone()
+    val sCal = Calendar.getInstance(tz).apply { timeInMillis = sessionMillis }
     return sCal.get(Calendar.YEAR) == nowCal.get(Calendar.YEAR) &&
            sCal.get(Calendar.MONTH) == nowCal.get(Calendar.MONTH)
   }
@@ -584,7 +679,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     viewModelScope.launch(Dispatchers.IO) {
       prefs.saveUiState(currentState)
       if (currentState.isLoggedIn && !uid.isNullOrEmpty()) {
-        firebaseDataManager.saveUserData(uid, token, currentState)
+        val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+        firebaseDataManager.saveUserData(uid, token, currentState, habitPrefs.getHabits(), habitPrefs.getHabitLogs())
       }
     }
   }
@@ -592,7 +688,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   fun getComputedStats(): ComputedStats {
     val history = _uiState.value.historyItems.filter { it.isCompleted }
     val daysOrder = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-    val nowCal = Calendar.getInstance()
+    val tz = getTimeZone()
+    val nowCal = Calendar.getInstance(tz)
     val nowMillis = nowCal.timeInMillis
     val todayLabel = getTodayDayOfWeekLabel()
 
@@ -843,6 +940,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     FocusBlockerService.notifyStateChanged(getApplication())
   }
 
+  var activeHabitIdForSession: String? = null
+
+  fun startFocusSessionForHabit(habit: com.example.ui.habits.HabitItem, context: Context) {
+    val targetMins = 40
+    _uiState.update { state ->
+      state.copy(
+        selectedDurationMinutes = targetMins,
+        isCustomDuration = false,
+        activeTab = 0
+      )
+    }
+    activeHabitIdForSession = habit.id
+    onStartFocusSessionRequested(context)
+  }
+
   private fun completeSessionNaturally() {
     timerJob?.cancel()
     timerJob = null
@@ -864,6 +976,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
       isCompleted = true,
       timestampMillis = now
     )
+
+    val habitId = activeHabitIdForSession
+    if (habitId != null) {
+      try {
+        val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+        val todayStr = java.time.LocalDate.now().toString()
+        habitPrefs.saveHabitLog(todayStr, habitId, true)
+      } catch (_: Exception) {}
+      activeHabitIdForSession = null
+    }
 
     _uiState.update { state ->
       val updatedHistory = listOf(newItem) + state.historyItems
@@ -935,24 +1057,57 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun setActiveTab(index: Int) {
-    _uiState.update { it.copy(activeTab = index) }
+    _uiState.update { it.copy(activeTab = index, isNotificationPageOpen = false, isAccountPageOpen = false) }
+    saveCurrentState()
+  }
+
+  fun setGoalDetailPageOpen(open: Boolean) {
+    _uiState.update { it.copy(isGoalDetailPageOpen = open, currentViewMonth = java.time.YearMonth.now()) }
+  }
+
+  fun navigateNextMonth() {
+    _uiState.update { it.copy(currentViewMonth = it.currentViewMonth.plusMonths(1)) }
+  }
+
+  fun navigatePrevMonth() {
+    _uiState.update { it.copy(currentViewMonth = it.currentViewMonth.minusMonths(1)) }
+  }
+
+  fun updateDailyGoalWeight(weight: Double) {
+    val currentGoal = _uiState.value.dailyGoal ?: return
+    val todayStr = java.time.LocalDate.now().toString()
+    val updatedWeights = currentGoal.weights.toMutableMap()
+    updatedWeights[todayStr] = weight
+    val updatedGoal = currentGoal.copy(weights = updatedWeights)
+    prefs.saveDailyGoal(updatedGoal)
+    _uiState.update { it.copy(dailyGoal = updatedGoal) }
     saveCurrentState()
   }
 
   fun createDailyGoal(durationType: String) {
     val newGoal = DailyGoal.create(durationType)
     prefs.saveDailyGoal(newGoal)
-    _uiState.update { it.copy(dailyGoal = newGoal) }
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    _uiState.update { it.copy(dailyGoal = newGoal, isGoalDetailPageOpen = true, currentViewMonth = java.time.YearMonth.now()) }
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
     saveCurrentState()
   }
 
-  fun createDailyGoalWithDetails(title: String, totalDays: Int, label: String? = null) {
-    val newGoal = DailyGoal.create(title = title, totalDaysInput = totalDays, labelInput = label)
+  fun createDailyGoalWithDetails(title: String, totalDays: Int, label: String? = null, durationType: String = "CUSTOM") {
+    val today = prefs.getCurrentLocalDate()
+    val newGoal = if (durationType == "CUSTOM") {
+      DailyGoal.create(title = title, totalDaysInput = totalDays, labelInput = label, today = today)
+    } else {
+      DailyGoal.create(durationType, today = today).copy(title = if (title.isNotBlank()) title.trim() else "Daily Goal")
+    }
     prefs.saveDailyGoal(newGoal)
-    _uiState.update { it.copy(dailyGoal = newGoal) }
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    _uiState.update { it.copy(dailyGoal = newGoal, isGoalDetailPageOpen = true, currentViewMonth = java.time.YearMonth.now()) }
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
     saveCurrentState()
+  }
+
+  fun setDailyFocusGoalMinutes(minutes: Int) {
+    _uiState.update { it.copy(dailyFocusGoalMinutes = minutes) }
+    prefs.saveDailyFocusGoalMinutes(minutes)
   }
 
   fun updateDailyGoalTitle(newTitle: String) {
@@ -960,7 +1115,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val updatedGoal = currentGoal.copy(title = if (newTitle.isNotBlank()) newTitle.trim() else "Daily Goal")
     prefs.saveDailyGoal(updatedGoal)
     _uiState.update { it.copy(dailyGoal = updatedGoal) }
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
+    saveCurrentState()
+  }
+
+  fun updateDailyGoalRating(dayIndex: Int, rating: Int) {
+    val currentGoal = _uiState.value.dailyGoal ?: return
+    val updatedGoal = currentGoal.withRating(dayIndex, rating)
+    prefs.saveDailyGoal(updatedGoal)
+    _uiState.update { it.copy(dailyGoal = updatedGoal) }
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
     saveCurrentState()
   }
 
@@ -977,21 +1141,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     )
     prefs.saveDailyGoal(updatedGoal)
     _uiState.update { it.copy(dailyGoal = updatedGoal) }
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
     saveCurrentState()
   }
 
   fun resetDailyGoal() {
     prefs.clearDailyGoal()
-    _uiState.update { it.copy(dailyGoal = null) }
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    _uiState.update { it.copy(dailyGoal = null, isGoalDetailPageOpen = false) }
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
     saveCurrentState()
   }
 
-  fun setNightMode(isNight: Boolean) {
-    _uiState.update { it.copy(isNightMode = isNight) }
+  fun setThemeMode(mode: String) {
+    _uiState.update { state ->
+      val isNight = when (mode) {
+        "DARK" -> true
+        "LIGHT" -> false
+        else -> state.isNightMode
+      }
+      state.copy(themeMode = mode, isNightMode = isNight)
+    }
     saveCurrentState()
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
+  }
+
+  fun setNightMode(isNight: Boolean) {
+    val mode = if (isNight) "DARK" else "LIGHT"
+    setThemeMode(mode)
   }
 
   fun setDefaultDurationMinutes(minutes: Int) {
@@ -1012,6 +1188,31 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   fun setFocusReminders(enabled: Boolean) {
     _uiState.update { it.copy(focusReminders = enabled) }
     saveCurrentState()
+  }
+
+  fun setHabitRemindersEnabled(enabled: Boolean) {
+    _uiState.update { it.copy(habitRemindersEnabled = enabled) }
+    saveCurrentState()
+    try {
+      val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+      habitPrefs.setHabitRemindersGlobalEnabled(enabled)
+      
+      // If disabled, cancel all habit reminders
+      if (!enabled) {
+          val habits = habitPrefs.getHabits()
+          habits.forEach { habit ->
+              com.example.ui.notifications.HabitReminderScheduler.cancelReminder(getApplication(), habit.id)
+          }
+      } else {
+          // If enabled, reschedule for all active habits
+          val habits = habitPrefs.getHabits()
+          habits.forEach { habit ->
+              if (habit.remindersEnabled && !habit.isArchived) {
+                  com.example.ui.notifications.HabitReminderScheduler.scheduleReminder(getApplication(), habit.id)
+              }
+          }
+      }
+    } catch (_: Exception) {}
   }
 
   fun setNotificationPageOpen(open: Boolean) {
@@ -1062,6 +1263,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     _uiState.update { it.copy(isAccountPageOpen = isOpen) }
   }
 
+  fun triggerManualSync() {
+    val uid = _uiState.value.userId
+    val token = _uiState.value.accessToken
+    if (!uid.isNullOrEmpty()) {
+      syncWithCloudData(uid, token)
+    }
+  }
+
   fun openAuthScreen(mode: String = "LOGIN") {
     _uiState.update { it.copy(isAuthScreenOpen = true, authMode = mode) }
   }
@@ -1091,16 +1300,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val userId = authResult.userId
     val finalEmail = authResult.email?.ifEmpty { trimmedEmail } ?: trimmedEmail
+    val cleanDefault = HomeUiState()
     if (!userId.isNullOrEmpty()) {
-      val userState = prefs.loadUiStateForUser(userId, HomeUiState()).copy(
+      val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+      val guestHabits = habitPrefs.getGuestHabits()
+      val guestLogs = habitPrefs.getGuestHabitLogs()
+      
+      val userState = cleanDefault.copy(
         userName = trimmedName,
         userEmail = finalEmail,
         userId = userId,
         isLoggedIn = false
       )
       prefs.saveUiStateForUser(userId, userState)
+      
       viewModelScope.launch(Dispatchers.IO) {
-        firebaseDataManager.saveUserData(userId, authResult.idToken, userState)
+        // Migrate guest data to new user account
+        firebaseDataManager.migrateGuestData(userId, authResult.idToken, userState, guestHabits, guestLogs)
+        // Also migrate history if stored in guest state
+        val guestState = prefs.getGuestUiState()
+        if (guestState.historyItems.isNotEmpty()) {
+           val migratedState = userState.copy(historyItems = guestState.historyItems)
+           prefs.saveUiStateForUser(userId, migratedState)
+           firebaseDataManager.saveUserData(userId, authResult.idToken, migratedState, guestHabits, guestLogs)
+        }
       }
     }
 
@@ -1202,7 +1425,57 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     prefs.saveUiState(updatedState)
 
     if (!userId.isNullOrEmpty()) {
-      syncWithCloudData(userId, idToken)
+      // Fetch cloud data and merge
+      viewModelScope.launch(Dispatchers.IO) {
+        val cloudData = firebaseDataManager.loadUserData(userId, idToken)
+        if (cloudData != null) {
+          val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+          val localGuestHabits = habitPrefs.getGuestHabits()
+          val cloudHabits = cloudData.habits ?: emptyList()
+          
+          // Merge local habits that don't exist in cloud
+          val mergedHabits = cloudHabits.toMutableList()
+          localGuestHabits.forEach { local ->
+            val exists = cloudHabits.any { it.name == local.name && it.createdAtMillis == local.createdAtMillis }
+            if (!exists) {
+              mergedHabits.add(local)
+            }
+          }
+          
+          habitPrefs.saveHabits(mergedHabits)
+          
+          // Merge logs
+          val cloudLogs = cloudData.habitLogs ?: emptyMap()
+          cloudLogs.forEach { (date, map) ->
+             map.forEach { (habitId, done) ->
+                habitPrefs.saveHabitLog(date, habitId, done)
+             }
+          }
+
+          _uiState.update { current ->
+            if (current.userId != userId) return@update current
+            val cloudHistory = cloudData.historyItems ?: emptyList()
+            val mergedHistory = (cloudHistory + current.historyItems).distinctBy { it.id }.sortedByDescending { it.timestampMillis }
+            
+            current.copy(
+              userName = cloudData.userName ?: current.userName,
+              historyItems = mergedHistory,
+              notificationsEnabled = cloudData.notificationsEnabled ?: current.notificationsEnabled,
+              selectedDurationMinutes = cloudData.selectedDurationMinutes ?: current.selectedDurationMinutes,
+              apps = cloudData.apps ?: current.apps,
+              dailyGoal = cloudData.dailyGoal ?: current.dailyGoal
+            )
+          }
+          saveCurrentState()
+          
+          // Clear guest data after successful merge
+          habitPrefs.clearGuestData()
+          prefs.clearGuestData()
+        } else {
+           // No cloud data, just save current local state to cloud
+           saveCurrentState()
+        }
+      }
     }
 
     triggerNotification("Welcome back", "Ready to lock in?")
@@ -1210,28 +1483,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   fun logout() {
-    prefs.clearActiveUserSession()
-    prefs.clearDailyGoal()
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    val habitPrefs = com.example.ui.habits.HabitPreferences(getApplication())
+    
+    // 0. Sign out from Firebase SDK
+    try {
+      com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+    } catch (_: Exception) {}
 
-    val freshLoggedOutState = HomeUiState(
-      isLoggedIn = false,
-      userName = "",
-      userEmail = "",
-      userId = null,
-      accessToken = null,
-      refreshToken = null,
-      isAccountPageOpen = false,
-      isAuthScreenOpen = false,
-      historyItems = emptyList(),
-      appNotifications = emptyList(),
-      todayFocusFormatted = "0m",
-      todaySessionsCount = 0,
-      dailyGoal = null
-    )
-
-    _uiState.value = recalculateTodayStats(freshLoggedOutState)
-    prefs.saveUiState(_uiState.value)
+    // 1. Clear in-memory state
+    _uiState.value = HomeUiState()
+    
+    // 2. Clear local storage
+    prefs.clearAll()
+    habitPrefs.clearAll()
+    
+    // 3. Clear guest data
+    prefs.clearGuestData()
+    habitPrefs.clearGuestData()
+    
+    // 4. Update UI
+    _uiState.update { it.copy(activeTab = 0, isLoggedIn = false, userId = null) }
   }
 
   fun resetAppData() {
@@ -1240,7 +1511,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     FocusBlockerService.stopService(getApplication())
 
     prefs.clearAll()
-    com.example.widget.DailyGoalWidgetProvider.updateAllWidgets(getApplication())
+    com.example.widget.ProgressIndicatorWidgetProvider.updateAllWidgets(getApplication())
 
     val freshState = HomeUiState(
       userName = "",

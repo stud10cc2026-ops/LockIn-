@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
+    <!-- Black Rounded Square Background -->
+    <path
+        android:fillColor="#1A1A1F"
+        android:pathData="M8,0 L24,0 A8,8 0 0,1 32,8 L32,24 A8,8 0 0,1 24,32 L8,32 A8,8 0 0,1 0,24 L0,8 A8,8 0 0,1 8,0 Z" />
+    <!-- White Target Symbol -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16,9 C12.13,9 9,12.13 9,16 C9,19.87 12.13,23 16,23 C19.87,23 23,19.87 23,16 C23,12.13 19.87,9 16,9 ZM16,21 C13.24,21 11,18.76 11,16 C11,13.24 13.24,11 16,11 C18.76,11 21,13.24 21,16 C21,18.76 18.76,21 16,21 ZM16,13 C14.34,13 13,14.34 13,16 C13,17.66 14.34,19 16,19 C17.66,19 19,17.66 19,16 C19,14.34 17.66,13 16,13 Z" />
+</vector>

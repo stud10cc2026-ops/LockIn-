@@ -1,6 +1,7 @@
 package com.example.ui.home
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -25,6 +26,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,16 +46,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AddBox
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.History
@@ -91,13 +99,19 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import com.example.data.DailyGoal
-import com.example.ui.daily.DailyGoalDotGrid
-import com.example.widget.DailyGoalWidgetProvider
+import com.example.widget.ProgressIndicatorWidgetProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -141,6 +155,42 @@ import com.example.ui.theme.SubtleCaption
 import com.example.ui.theme.WarmOffWhite
 import com.example.util.AppBlockerHelper
 import android.Manifest
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.em
+import com.example.ui.theme.RefActiveTabBlue
+import com.example.ui.theme.RefNavBackground
+import com.example.ui.theme.RefNavBorder
+import com.example.ui.theme.RefPageBackgroundTop
+import com.example.ui.theme.RefPageBackgroundBottom
+import com.example.ui.theme.RefHeadlineGray
+import com.example.ui.theme.RefNavIconGray
+import com.example.ui.theme.RefNearBlack
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.draw.scale
+import com.example.ui.habits.HabitsContent
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -150,6 +200,38 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.util.NotificationHelper
 
+private val ThinCalendarOutlineIcon: ImageVector by lazy {
+  ImageVector.Builder(
+    name = "ThinCalendarOutline",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f
+  ).path(
+    stroke = SolidColor(Color.Black),
+    strokeLineWidth = 1.5f,
+    strokeLineCap = StrokeCap.Round,
+    strokeLineJoin = StrokeJoin.Round
+  ) {
+    moveTo(6.5f, 5f)
+    lineTo(17.5f, 5f)
+    curveTo(18.88f, 5f, 20f, 6.12f, 20f, 7.5f)
+    lineTo(20f, 18.5f)
+    curveTo(20f, 19.88f, 18.88f, 21f, 17.5f, 21f)
+    lineTo(6.5f, 21f)
+    curveTo(5.12f, 21f, 4f, 19.88f, 4f, 18.5f)
+    lineTo(4f, 7.5f)
+    curveTo(4f, 6.12f, 5.12f, 5f, 6.5f, 5f)
+    close()
+    moveTo(4f, 10f)
+    lineTo(20f, 10f)
+    moveTo(8f, 3f)
+    lineTo(8f, 6f)
+    moveTo(16f, 3f)
+    lineTo(16f, 6f)
+  }.build()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -158,6 +240,23 @@ fun HomeScreen(
 ) {
   val context = LocalContext.current
   val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+  val systemInDark = isSystemInDarkTheme()
+  val effectiveNightMode = when (state.themeMode) {
+    "DARK" -> true
+    "LIGHT" -> false
+    else -> systemInDark
+  }
+
+  BackHandler(enabled = state.isNotificationPageOpen) {
+    viewModel.setNotificationPageOpen(false)
+  }
+  BackHandler(enabled = state.isAccountPageOpen) {
+    viewModel.setAccountPageOpen(false)
+  }
+  BackHandler(enabled = state.activeTab != 0 && !state.isNotificationPageOpen && !state.isAccountPageOpen) {
+    viewModel.setActiveTab(0)
+  }
 
   val permissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestPermission()
@@ -190,9 +289,25 @@ fun HomeScreen(
   }
 
   val isNightMode = state.isNightMode
-  val bgColor = if (isNightMode) DarkBackground else LightPageBackground
-  var showDailyGoalDialog by remember { mutableStateOf(false) }
-  var startWithEditName by remember { mutableStateOf(false) }
+  val backgroundBrush = if (isNightMode) {
+    Brush.verticalGradient(listOf(DarkBackground, DarkBackground))
+  } else {
+    Brush.verticalGradient(
+      colors = listOf(RefPageBackgroundTop, RefPageBackgroundBottom),
+      startY = 0f,
+      endY = Float.POSITIVE_INFINITY
+    )
+  }
+  var showPremiumPopup by remember { mutableStateOf(false) }
+  var showCustomDurationDialog by remember { mutableStateOf(false) }
+  var timezoneToastMessage by remember { mutableStateOf<String?>(null) }
+
+  LaunchedEffect(timezoneToastMessage) {
+    if (timezoneToastMessage != null) {
+      kotlinx.coroutines.delay(2500)
+      timezoneToastMessage = null
+    }
+  }
 
   if (state.showWelcomeIntro) {
     WelcomeIntroScreen(
@@ -209,6 +324,10 @@ fun HomeScreen(
       totalSeconds = state.totalSessionSeconds,
       isPaused = state.isSessionPaused,
       blockedAppName = state.blockedAppName,
+      isNightMode = effectiveNightMode,
+      themeMode = state.themeMode,
+      onThemeModeSelected = { mode -> viewModel.setThemeMode(mode) },
+      onNightModeToggle = { isNight -> viewModel.setNightMode(isNight) },
       onClearBlockedAppAlert = { viewModel.clearBlockedAppAlert() },
       onPauseResumeClick = { viewModel.togglePauseResumeFocusSession() },
       onEndSessionClick = { viewModel.endFocusSession() },
@@ -218,9 +337,7 @@ fun HomeScreen(
     Box(
       modifier = modifier
         .fillMaxSize()
-        .background(bgColor)
-        .navigationBarsPadding()
-        .imePadding()
+        .background(backgroundBrush)
     ) {
       AnimatedContent(
         targetState = state.activeTab,
@@ -229,6 +346,9 @@ fun HomeScreen(
           slideInVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) { height -> height / 30 } togetherWith
           fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
         },
+        modifier = Modifier
+          .navigationBarsPadding()
+          .imePadding(),
         label = "MainTabTransition"
       ) { targetTab ->
         when (targetTab) {
@@ -257,6 +377,16 @@ fun HomeScreen(
             )
           }
           3 -> {
+            // HABITS SCREEN
+            HabitsContent(
+              userName = state.userName,
+              isNightMode = isNightMode,
+              selectedTimezoneId = state.selectedTimezoneId,
+              activeGoalTitle = state.dailyGoal?.title ?: "",
+              onStartLockInForHabit = { habit -> viewModel.startFocusSessionForHabit(habit, context) }
+            )
+          }
+          4 -> {
             // SETTINGS SCREEN
             SettingsContent(
               userName = state.userName,
@@ -309,8 +439,8 @@ fun HomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .statusBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 90.dp) // Space for integrated bottom navigation
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp) // Extra space for floating nav
             ) {
               Spacer(modifier = Modifier.height(14.dp))
 
@@ -323,11 +453,13 @@ fun HomeScreen(
                     translationY = headerTranslationY.value.dp.toPx()
                   }
               ) {
-                TopHeader(
+                RefTopBar(
                   userName = state.userName,
-                  isLoggedIn = state.isLoggedIn,
-                  hasUnreadNotifications = state.hasUnreadNotifications,
+                  selectedCountry = state.selectedCountry,
+                  selectedTimezoneId = state.selectedTimezoneId,
                   isNightMode = isNightMode,
+                  onDateClick = { viewModel.openCountryPicker() },
+                  onProfileClick = { viewModel.setAccountPageOpen(true) },
                   onNotificationClick = { viewModel.setNotificationPageOpen(true) }
                 )
               }
@@ -344,7 +476,11 @@ fun HomeScreen(
                   }
               ) {
                 // 2. MAIN HERO HEADLINE
-                MainHeroSection(isNightMode = isNightMode)
+                MainHeroSection(
+                  userName = state.userName,
+                  isLoggedIn = state.isLoggedIn,
+                  isNightMode = isNightMode
+                )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -356,7 +492,8 @@ fun HomeScreen(
                   isNightMode = isNightMode,
                   onSelectPreset = { viewModel.selectPresetDuration(it) },
                   onSelectCustom = { viewModel.toggleCustomDuration() },
-                  onCustomMinutesChange = { viewModel.updateCustomMinutes(it) }
+                  onCustomMinutesChange = { viewModel.updateCustomMinutes(it) },
+                  onShowCustomDialog = { showCustomDurationDialog = true }
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -375,23 +512,16 @@ fun HomeScreen(
                   todayFocusFormatted = state.todayFocusFormatted,
                   sessionsCount = state.todaySessionsCount,
                   selectedDurationMinutes = state.effectiveDurationMinutes,
-                  isNightMode = isNightMode
+                  isNightMode = isNightMode,
+                  onNavigateToHistory = { viewModel.setActiveTab(1) }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 7. COMPACT DAILY GOAL SECTION
-                HomeDailyGoalSection(
-                  goal = state.dailyGoal,
+                // 7. COMPACT PREMIUM UPGRADE SECTION
+                PremiumUpgradeCard(
                   isNightMode = isNightMode,
-                  onOpenSetupDialog = {
-                    showDailyGoalDialog = true
-                    startWithEditName = false
-                  },
-                  onEditName = {
-                    showDailyGoalDialog = true
-                    startWithEditName = true
-                  }
+                  onClick = { showPremiumPopup = true }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -399,55 +529,6 @@ fun HomeScreen(
             }
           }
         }
-      }
-
-      // INTEGRATED FLOATING BOTTOM NAVIGATION BAR
-      FloatingBottomNavigation(
-        activeTab = state.activeTab,
-        isNightMode = state.isNightMode,
-        onTabSelected = { viewModel.setActiveTab(it) },
-        modifier = Modifier.align(Alignment.BottomCenter)
-      )
-
-      // Daily Goal Setup / Overview Dialog
-      if (showDailyGoalDialog) {
-        DailyGoalDialog(
-          goal = state.dailyGoal,
-          isNightMode = state.isNightMode,
-          startWithEditName = startWithEditName,
-          onDismiss = {
-            showDailyGoalDialog = false
-            startWithEditName = false
-          },
-          onCreateGoalWithDetails = { title, totalDays, label ->
-            viewModel.createDailyGoalWithDetails(title, totalDays, label)
-            showDailyGoalDialog = false
-            startWithEditName = false
-            Toast.makeText(context, "Your goal has been set", Toast.LENGTH_SHORT).show()
-          },
-          onUpdateGoalTitle = { newTitle ->
-            viewModel.updateDailyGoalTitle(newTitle)
-          },
-          onUpdateGoalDuration = { totalDays, label ->
-            viewModel.updateDailyGoalDuration(totalDays, label)
-          },
-          onResetGoal = {
-            viewModel.resetDailyGoal()
-          }
-        )
-      }
-
-      // Session Started Dialog/Overlay
-      AnimatedVisibility(
-        visible = state.isSessionStartedDialog,
-        enter = fadeIn(animationSpec = tween(200)) + scaleIn(animationSpec = tween(200), initialScale = 0.95f),
-        exit = fadeOut(animationSpec = tween(150)) + scaleOut(animationSpec = tween(150), targetScale = 0.95f)
-      ) {
-        SessionStartedOverlay(
-          durationMinutes = state.effectiveDurationMinutes,
-          isNightMode = state.isNightMode,
-          onDismiss = { viewModel.dismissSessionStartedDialog() }
-        )
       }
 
       // Notification Page Overlay
@@ -469,8 +550,13 @@ fun HomeScreen(
           onOpenSystemSettings = { NotificationHelper.openNotificationSettings(context) },
           focusReminders = state.focusReminders,
           sessionCompletedReminder = state.sessionCompletedReminder,
+          habitRemindersEnabled = state.habitRemindersEnabled,
           onFocusRemindersToggle = { viewModel.setFocusReminders(it) },
-          onSessionCompletedToggle = { viewModel.setSessionCompletedReminder(it) }
+          onSessionCompletedToggle = { viewModel.setSessionCompletedReminder(it) },
+          onHabitRemindersToggle = { viewModel.setHabitRemindersEnabled(it) },
+          modifier = Modifier
+            .navigationBarsPadding()
+            .imePadding()
         )
       }
 
@@ -503,9 +589,49 @@ fun HomeScreen(
           },
           onUpdateName = {
             viewModel.setUserName(it)
-          }
+          },
+          onManualSync = {
+            viewModel.triggerManualSync()
+          },
+          modifier = Modifier
+            .navigationBarsPadding()
+            .imePadding()
         )
       }
+
+      // SOFT BOTTOM FADE OVERLAY
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(170.dp)
+          .align(Alignment.BottomCenter)
+          .background(
+            if (isNightMode) {
+              Brush.verticalGradient(
+                0.0f to Color(0x0013151A),
+                0.55f to Color(0xB313151A),
+                1.0f to Color(0xFF13151A)
+              )
+            } else {
+              Brush.verticalGradient(
+                0.0f to Color(0x00F6F8FA),
+                0.55f to Color(0xB3F6F8FA),
+                1.0f to Color(0xFFF6F8FA)
+              )
+            }
+          )
+      )
+
+      // INTEGRATED FLOATING BOTTOM NAVIGATION BAR
+      RefFloatingBottomNavigation(
+        activeTab = state.activeTab,
+        isNightMode = state.isNightMode,
+        onTabSelected = { viewModel.setActiveTab(it) },
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .padding(bottom = 16.dp) // 16px above bottom safe area
+          .padding(horizontal = 12.dp) // 12px from left/right
+      )
 
       // Auth Modal (Sign In / Sign Up)
       AuthModalOverlay(
@@ -542,6 +668,91 @@ fun HomeScreen(
           onDismiss = { viewModel.dismissPermissionPrompt() }
         )
       }
+
+      AnimatedVisibility(
+        visible = showCustomDurationDialog,
+        enter = fadeIn(animationSpec = tween(180)) + scaleIn(initialScale = 0.96f, animationSpec = tween(180)),
+        exit = fadeOut(animationSpec = tween(140)) + scaleOut(targetScale = 0.96f, animationSpec = tween(140))
+      ) {
+        CustomDurationInputDialog(
+          initialMinutes = state.customMinutes,
+          isNightMode = isNightMode,
+          onConfirm = { minutes ->
+            viewModel.updateCustomMinutes(minutes)
+            showCustomDurationDialog = false
+          },
+          onDismiss = { showCustomDurationDialog = false }
+        )
+      }
+
+      AnimatedVisibility(
+        visible = showPremiumPopup,
+        enter = fadeIn(animationSpec = tween(200)) + scaleIn(animationSpec = tween(200), initialScale = 0.95f),
+        exit = fadeOut(animationSpec = tween(150)) + scaleOut(animationSpec = tween(150), targetScale = 0.95f)
+      ) {
+        PremiumUpgradePopup(
+          isNightMode = isNightMode,
+          onDismiss = { showPremiumPopup = false }
+        )
+      }
+
+      // Country / Timezone Selection Dialog
+      AnimatedVisibility(
+        visible = state.isCountryPickerOpen,
+        enter = fadeIn(animationSpec = tween(180)) + scaleIn(initialScale = 0.96f, animationSpec = tween(180)),
+        exit = fadeOut(animationSpec = tween(140)) + scaleOut(targetScale = 0.96f, animationSpec = tween(140))
+      ) {
+        CountryTimezoneDialog(
+          currentCountry = state.selectedCountry,
+          currentTimezoneId = state.selectedTimezoneId,
+          isNightMode = isNightMode,
+          onDismiss = { viewModel.closeCountryPicker() },
+          onSave = { countryName, timezoneId ->
+            viewModel.setSelectedCountryAndTimezone(countryName, timezoneId)
+            val displayName = if (!countryName.isNullOrEmpty() && countryName != "Use Device Default") countryName else "Device Default"
+            timezoneToastMessage = "$displayName saved"
+          }
+        )
+      }
+
+      // Confirmation Toast Notification for Timezone / Country saved
+      AnimatedVisibility(
+        visible = timezoneToastMessage != null,
+        enter = fadeIn(animationSpec = tween(200)) + slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(200)),
+        exit = fadeOut(animationSpec = tween(200)) + slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = tween(200)),
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          .padding(bottom = 100.dp)
+          .navigationBarsPadding()
+      ) {
+        if (timezoneToastMessage != null) {
+          Surface(
+            shape = CircleShape,
+            color = Color(0xFF1A1A1F),
+            border = BorderStroke(1.dp, Color(0xFF3A3A44)),
+            shadowElevation = 8.dp,
+            modifier = Modifier
+              .padding(horizontal = 24.dp)
+              .testTag("timezone_saved_toast")
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
+            ) {
+              Text(
+                text = timezoneToastMessage!!,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                  fontWeight = FontWeight.SemiBold,
+                  fontSize = 14.sp
+                ),
+                color = Color.White
+              )
+            }
+          }
+        }
+      }
+
     }
   }
 }
@@ -549,105 +760,150 @@ fun HomeScreen(
 
 
 /**
- * Top Header: Avatar + Greeting on left, Notification Bell on right.
+ * Press Scale Animation Modifier
  */
 @Composable
-private fun TopHeader(
+fun Modifier.pressScale(onClick: () -> Unit): Modifier {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (isPressed) 0.96f else 1f,
+    label = "PressScale"
+  )
+  return this
+    .graphicsLayer {
+      scaleX = scale
+      scaleY = scale
+    }
+    .clickable(
+      interactionSource = interactionSource,
+      indication = null,
+      onClick = onClick
+    )
+}
+
+@Composable
+private fun RefTopBar(
   userName: String,
-  isLoggedIn: Boolean = true,
-  hasUnreadNotifications: Boolean = false,
+  selectedCountry: String?,
+  selectedTimezoneId: String?,
   isNightMode: Boolean,
+  onDateClick: () -> Unit,
+  onProfileClick: () -> Unit,
   onNotificationClick: () -> Unit
 ) {
-  val displayName = if (userName.isNotBlank()) userName else if (isLoggedIn) "User" else "Guest"
-  val avatarLetter = if (userName.isNotBlank()) {
-    userName.trim().firstOrNull()?.uppercaseChar()?.toString() ?: ""
-  } else ""
+  val surfaceColor = if (isNightMode) DarkCardSurface else Color.White
+  val textColor = if (isNightMode) DarkTextOffWhite else RefNearBlack
+  val iconColor = if (isNightMode) DarkTextOffWhite else RefNavIconGray
 
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-  val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  val timeZone = remember(selectedTimezoneId) {
+    if (selectedTimezoneId.isNullOrEmpty() || selectedTimezoneId == "DEVICE_DEFAULT") {
+      java.util.TimeZone.getDefault()
+    } else {
+      java.util.TimeZone.getTimeZone(selectedTimezoneId)
+    }
+  }
+
+  val today = remember(timeZone) {
+    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    sdf.timeZone = timeZone
+    sdf.format(Date())
+  }
 
   Row(
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(44.dp),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(12.dp)
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier
+        .clip(RoundedCornerShape(22.dp))
+        .clickable { onDateClick() }
+        .testTag("home_date_timezone_picker_trigger")
     ) {
-      // User Avatar Circle displaying first letter of user's saved name
+      // Calendar Button (Clickable)
       Box(
         modifier = Modifier
-          .size(38.dp)
-          .clip(CircleShape)
-          .background(SignatureNeonLime),
+          .size(44.dp)
+          .shadow(if (isNightMode) 0.dp else 4.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.1f))
+          .background(surfaceColor, CircleShape),
         contentAlignment = Alignment.Center
       ) {
-        if (avatarLetter.isNotEmpty()) {
+        Icon(
+          imageVector = ThinCalendarOutlineIcon,
+          contentDescription = "Date Icon",
+          tint = iconColor,
+          modifier = Modifier.size(22.dp)
+        )
+      }
+
+      // Date Pill with down-chevron icon (Clickable)
+      Box(
+        modifier = Modifier
+          .height(44.dp)
+          .shadow(if (isNightMode) 0.dp else 4.dp, RoundedCornerShape(22.dp), spotColor = Color.Black.copy(alpha = 0.1f))
+          .background(surfaceColor, RoundedCornerShape(22.dp)),
+        contentAlignment = Alignment.Center
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+          modifier = Modifier.padding(start = 16.dp, end = 12.dp)
+        ) {
           Text(
-            text = avatarLetter,
-            style = MaterialTheme.typography.titleMedium.copy(
-              fontWeight = FontWeight.Bold,
-              fontSize = 16.sp
-            ),
-            color = DarkTextOnLime
+            text = today,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+            color = textColor
           )
-        } else {
           Icon(
-            imageVector = Icons.Outlined.Person,
-            contentDescription = "Profile",
-            modifier = Modifier.size(20.dp),
-            tint = DarkTextOnLime
+            imageVector = Icons.Outlined.KeyboardArrowDown,
+            contentDescription = "Select Timezone",
+            tint = iconColor,
+            modifier = Modifier.size(16.dp)
           )
         }
       }
-
-      Column {
-        Text(
-          text = if (isLoggedIn) "Welcome back" else "Welcome",
-          style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-          color = mutedColor
-        )
-        Text(
-          text = displayName,
-          style = MaterialTheme.typography.titleSmall.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp
-          ),
-          color = textColor
-        )
-      }
     }
 
-    // Notification Bell Button
-    Box(
-      modifier = Modifier
-        .size(38.dp)
-        .clip(CircleShape)
-        .background(surfaceColor)
-        .border(1.dp, borderColor, CircleShape)
-        .clickable(onClick = onNotificationClick)
-        .testTag("notification_button"),
-      contentAlignment = Alignment.Center
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-      Icon(
-        imageVector = Icons.Outlined.Notifications,
-        contentDescription = "Notifications",
-        tint = textColor,
-        modifier = Modifier.size(20.dp)
-      )
-      if (hasUnreadNotifications) {
-        // Tiny notification dot
-        Box(
-          modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(top = 8.dp, end = 8.dp)
-            .size(5.dp)
-            .clip(CircleShape)
-            .background(SignatureNeonLime)
+      // Notification Bell
+      Box(
+        modifier = Modifier
+          .size(44.dp)
+          .shadow(if (isNightMode) 0.dp else 4.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.1f))
+          .background(surfaceColor, CircleShape)
+          .pressScale(onClick = onNotificationClick),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          imageVector = Icons.Outlined.Notifications,
+          contentDescription = "Notifications",
+          tint = iconColor,
+          modifier = Modifier.size(22.dp)
+        )
+      }
+
+      // Profile Button
+      Box(
+        modifier = Modifier
+          .size(44.dp)
+          .shadow(if (isNightMode) 0.dp else 4.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.1f))
+          .background(surfaceColor, CircleShape)
+          .pressScale(onClick = onProfileClick),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          imageVector = Icons.Outlined.Person,
+          contentDescription = "Profile",
+          tint = iconColor,
+          modifier = Modifier.size(22.dp)
         )
       }
     }
@@ -655,31 +911,211 @@ private fun TopHeader(
 }
 
 /**
- * Main Hero Section: Large clean title & supporting sentence.
+ * Main Hero Section: Two-tone headline.
  */
 @Composable
-private fun MainHeroSection(isNightMode: Boolean) {
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-
+private fun MainHeroSection(userName: String, isLoggedIn: Boolean, isNightMode: Boolean) {
+  val nameToUse = userName.ifBlank { "Guest" }
+  
   Column(
-    modifier = Modifier.fillMaxWidth(),
-    verticalArrangement = Arrangement.spacedBy(4.dp)
+    modifier = Modifier.fillMaxWidth()
   ) {
     Text(
-      text = "Ready to lock in?",
-      style = MaterialTheme.typography.headlineMedium.copy(
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = (-0.5).sp
-      ),
-      color = textColor
+      text = "Hello $nameToUse,",
+      style = MaterialTheme.typography.displayMedium.copy(
+        fontSize = 26.sp,
+        fontWeight = FontWeight.Medium,
+        lineHeight = 1.15.em,
+        letterSpacing = (-0.26).sp, // -0.01em
+        color = if (isNightMode) DarkTextSecondary else RefHeadlineGray
+      )
     )
+    Spacer(modifier = Modifier.height(2.dp))
     Text(
-      text = "Choose a session. Block the noise. Get it done.",
-      style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-      color = mutedColor
+      text = "Ready to lock in?",
+      style = MaterialTheme.typography.displayLarge.copy(
+        fontSize = 32.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 1.15.em,
+        letterSpacing = (-0.64).sp, // -0.02em
+        color = if (isNightMode) DarkTextPrimary else RefNearBlack
+      )
+    )
+  }
+}
+
+private data class NavTabData(
+  val id: Int,
+  val icon: ImageVector,
+  val activeIcon: ImageVector
+)
+
+private sealed class NavItemType(val key: Any) {
+  data class Tab(val data: NavTabData, val isSelected: Boolean, val endPadding: Dp) : NavItemType(data.id)
+  data class SpacerItem(val keyName: String) : NavItemType(keyName)
+}
+
+@Composable
+private fun RefFloatingBottomNavigation(
+  activeTab: Int,
+  isNightMode: Boolean,
+  onTabSelected: (Int) -> Unit,
+  modifier: Modifier = Modifier
+) {
+  val bgColor = if (isNightMode) DarkCardSurface else Color.White
+  val borderColor = if (isNightMode) DarkSubtleBorder else RefNavBorder
+
+  val allNavTabs = remember {
+    listOf(
+      NavTabData(0, Icons.Outlined.Home, Icons.Filled.Home),
+      NavTabData(1, Icons.Outlined.History, Icons.Outlined.History),
+      NavTabData(2, Icons.Outlined.BarChart, Icons.Filled.BarChart),
+      NavTabData(3, Icons.Outlined.Checklist, Icons.Filled.Checklist),
+      NavTabData(4, Icons.Outlined.Settings, Icons.Filled.Settings)
+    )
+  }
+
+  val activeTabData = allNavTabs.firstOrNull { it.id == activeTab } ?: allNavTabs[0]
+  val rightTabs = remember(activeTab) { allNavTabs.filter { it.id != activeTab } }
+
+  val activePillBg = if (isNightMode) Color(0xFF2C3038) else RefActiveTabBlue
+  val activeIconTint = if (isNightMode) Color.White else RefNearBlack
+  val inactiveIconTint = if (isNightMode) DarkTextSecondary else RefNavIconGray
+
+  var isTabChanging by remember { mutableStateOf(false) }
+  val pillScale by animateFloatAsState(
+    targetValue = if (isTabChanging) 0.88f else 1f,
+    animationSpec = spring(stiffness = 380f, dampingRatio = 0.68f),
+    finishedListener = { isTabChanging = false },
+    label = "PillSettleScale"
+  )
+
+  LaunchedEffect(activeTab) {
+    isTabChanging = true
+  }
+
+  Surface(
+    modifier = modifier
+      .fillMaxWidth()
+      .height(58.dp)
+      .border(1.dp, borderColor, RoundedCornerShape(29.dp)),
+    shape = RoundedCornerShape(29.dp),
+    color = bgColor,
+    shadowElevation = 0.dp // No shadow
+  ) {
+    Row(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 8.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      // 1. ACTIVE TAB PILL (FAR LEFT, FIXED UNCOMPRESSIBLE SIZE, SETTLE SCALE ANIMATION)
+      Box(
+        modifier = Modifier
+          .requiredSize(44.dp)
+          .scale(pillScale)
+          .clip(CircleShape)
+          .background(activePillBg),
+        contentAlignment = Alignment.Center
+      ) {
+        Crossfade(
+          targetState = activeTabData,
+          animationSpec = tween(220, easing = FastOutSlowInEasing),
+          label = "ActivePillIconCrossfade"
+        ) { tabData ->
+          Icon(
+            imageVector = tabData.activeIcon,
+            contentDescription = null,
+            tint = activeIconTint,
+            modifier = Modifier.size(22.dp)
+          )
+        }
+      }
+
+      // 2. DYNAMIC SPACER PUSHING INACTIVE TABS TO THE RIGHT
+      Spacer(modifier = Modifier.weight(1f))
+
+      // 3. GROUPED INACTIVE TABS ON THE RIGHT
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        rightTabs.forEach { tab ->
+          Box(
+            modifier = Modifier
+              .requiredSize(40.dp)
+              .clip(CircleShape)
+              .clickable { onTabSelected(tab.id) },
+            contentAlignment = Alignment.Center
+          ) {
+            Crossfade(
+              targetState = tab,
+              animationSpec = tween(200, easing = FastOutSlowInEasing),
+              label = "InactiveIconCrossfade"
+            ) { targetTab ->
+              Icon(
+                imageVector = targetTab.icon,
+                contentDescription = null,
+                tint = inactiveIconTint,
+                modifier = Modifier.size(22.dp)
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun NavItem(
+  icon: ImageVector,
+  activeIcon: ImageVector,
+  isSelected: Boolean,
+  isNightMode: Boolean,
+  onClick: () -> Unit
+) {
+  val iconColor = if (isSelected) {
+    if (isNightMode) Color.White else RefNearBlack
+  } else {
+    if (isNightMode) DarkTextSecondary else RefNavIconGray
+  }
+
+  var scaleTarget by remember(isSelected) { mutableFloatStateOf(if (isSelected) 1.05f else 1.0f) }
+
+  LaunchedEffect(isSelected) {
+    if (isSelected) {
+      scaleTarget = 1.05f
+      kotlinx.coroutines.delay(180)
+      scaleTarget = 1.0f
+    } else {
+      scaleTarget = 1.0f
+    }
+  }
+
+  val animatedScale by animateFloatAsState(
+    targetValue = scaleTarget,
+    animationSpec = spring(stiffness = 300f, dampingRatio = 0.8f),
+    label = "ActiveTabScale"
+  )
+
+  Box(
+    modifier = Modifier
+      .size(46.dp)
+      .graphicsLayer {
+        scaleX = animatedScale
+        scaleY = animatedScale
+      }
+      .clip(CircleShape)
+      .background(if (isSelected && !isNightMode) RefActiveTabBlue else Color.Transparent)
+      .pressScale(onClick = onClick),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      imageVector = if (isSelected) activeIcon else icon,
+      contentDescription = null,
+      tint = iconColor,
+      modifier = Modifier.size(22.dp)
     )
   }
 }
@@ -695,10 +1131,9 @@ private fun FocusSessionPanel(
   isNightMode: Boolean,
   onSelectPreset: (Int) -> Unit,
   onSelectCustom: () -> Unit,
-  onCustomMinutesChange: (Int) -> Unit
+  onCustomMinutesChange: (Int) -> Unit,
+  onShowCustomDialog: () -> Unit
 ) {
-  var showCustomDialog by remember { mutableStateOf(false) }
-
   val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
   val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
   val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
@@ -738,13 +1173,6 @@ private fun FocusSessionPanel(
             color = textColor
           )
         }
-
-        Box(
-          modifier = Modifier
-            .size(8.dp)
-            .clip(CircleShape)
-            .background(SignatureNeonLime)
-        )
       }
 
       Spacer(modifier = Modifier.height(3.dp))
@@ -799,7 +1227,7 @@ private fun FocusSessionPanel(
             )
 
             Surface(
-              onClick = { showCustomDialog = true },
+              onClick = onShowCustomDialog,
               shape = RoundedCornerShape(8.dp),
               color = containerColor,
               border = BorderStroke(1.dp, borderColor)
@@ -825,28 +1253,16 @@ private fun FocusSessionPanel(
             onValueChange = { onCustomMinutesChange(it.toInt()) },
             valueRange = 5f..300f,
             colors = SliderDefaults.colors(
-              thumbColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-              activeTrackColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
+              thumbColor = if (isNightMode) Color.White else DarkButtonCharcoal,
+              activeTrackColor = if (isNightMode) Color.White else DarkButtonCharcoal,
               activeTickColor = if (isNightMode) DarkButtonCharcoal else DarkButtonCharcoal,
               inactiveTrackColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder,
-              inactiveTickColor = if (isNightMode) SignatureNeonLime.copy(alpha = 0.5f) else DarkButtonCharcoal.copy(alpha = 0.35f)
+              inactiveTickColor = if (isNightMode) Color.White.copy(alpha = 0.5f) else DarkButtonCharcoal.copy(alpha = 0.35f)
             )
           )
         }
       }
     }
-  }
-
-  if (showCustomDialog) {
-    CustomDurationInputDialog(
-      initialMinutes = customMinutes,
-      isNightMode = isNightMode,
-      onConfirm = { minutes ->
-        onCustomMinutesChange(minutes)
-        showCustomDialog = false
-      },
-      onDismiss = { showCustomDialog = false }
-    )
   }
 }
 
@@ -858,101 +1274,153 @@ private fun CustomDurationInputDialog(
   onDismiss: () -> Unit
 ) {
   var textValue by remember { mutableStateOf(initialMinutes.toString()) }
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-  val inputBg = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  val cardBg = Color.White
+  val textColor = Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
+  val inputBg = Color(0xFFEEF1F5)
+  val borderColor = Color(0xFFE3E9F0)
 
   val parsedInt = textValue.toIntOrNull()
   val isTooHigh = parsedInt != null && parsedInt > 300
   val isTooLow = parsedInt != null && parsedInt < 1
   val isInvalid = textValue.isBlank() || isTooHigh || isTooLow
 
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = {
-      Text(
-        text = "Enter Custom Duration",
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-        color = textColor
-      )
-    },
-    text = {
-      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-          text = "Set your focus time in minutes (1 to 300 min):",
-          style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-          color = mutedColor
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0x73141A26))
+      .clickable(onClick = onDismiss),
+    contentAlignment = Alignment.Center
+  ) {
+    Surface(
+      modifier = Modifier
+        .padding(horizontal = 28.dp)
+        .fillMaxWidth()
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
         )
-        OutlinedTextField(
-          value = textValue,
-          onValueChange = { textValue = it.filter { char -> char.isDigit() } },
-          singleLine = true,
-          isError = isTooHigh || isTooLow,
-          label = { Text("Minutes") },
-          textStyle = androidx.compose.ui.text.TextStyle(
-            color = textColor,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
+        .clickable(enabled = false) {},
+      shape = RoundedCornerShape(24.dp),
+      color = cardBg,
+      shadowElevation = 0.dp
+    ) {
+      Column(modifier = Modifier.padding(28.dp)) {
+        Text(
+          text = "Enter Custom Duration",
+          style = MaterialTheme.typography.titleMedium.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp
           ),
-          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-          colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = inputBg,
-            unfocusedContainerColor = inputBg,
-            focusedBorderColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else if (isNightMode) SignatureNeonLime else Color.Black,
-            unfocusedBorderColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else borderColor,
-            errorBorderColor = Color(0xFFD93838),
-            errorLabelColor = Color(0xFFD93838),
-            focusedLabelColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else if (isNightMode) SignatureNeonLime else Color.Black,
-            unfocusedLabelColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else mutedColor,
-            focusedTextColor = textColor,
-            unfocusedTextColor = textColor,
-            cursorColor = if (isNightMode) SignatureNeonLime else Color.Black
-          ),
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(12.dp)
+          color = textColor
         )
 
-        if (isTooHigh) {
-          Text(
-            text = "Duration exceeds 300 min. Please reduce the number.",
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 12.sp),
-            color = Color(0xFFD93838)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+          text = "Set your focus time in minutes (1 to 300 min):",
+          style = MaterialTheme.typography.bodyMedium.copy(
+            fontSize = 15.sp,
+            fontWeight = FontWeight.W400
+          ),
+          color = mutedColor
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          OutlinedTextField(
+            value = textValue,
+            onValueChange = { textValue = it.filter { char -> char.isDigit() } },
+            singleLine = true,
+            isError = isTooHigh || isTooLow,
+            label = { Text("Minutes") },
+            textStyle = androidx.compose.ui.text.TextStyle(
+              color = textColor,
+              fontSize = 16.sp,
+              fontWeight = FontWeight.SemiBold
+            ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedContainerColor = inputBg,
+              unfocusedContainerColor = inputBg,
+              focusedBorderColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else Color(0xFF1A1A1F),
+              unfocusedBorderColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else borderColor,
+              errorBorderColor = Color(0xFFD93838),
+              errorLabelColor = Color(0xFFD93838),
+              focusedLabelColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else Color(0xFF1A1A1F),
+              unfocusedLabelColor = if (isTooHigh || isTooLow) Color(0xFFD93838) else mutedColor,
+              focusedTextColor = textColor,
+              unfocusedTextColor = textColor,
+              cursorColor = Color(0xFF1A1A1F),
+              selectionColors = TextSelectionColors(
+                handleColor = Color(0xFF1A1A1F),
+                backgroundColor = Color(0xFF1A1A1F).copy(alpha = 0.2f)
+              )
+            ),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp)
           )
-        } else if (isTooLow && textValue.isNotEmpty()) {
-          Text(
-            text = "Please enter a duration between 1 and 300 min.",
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 12.sp),
-            color = Color(0xFFD93838)
-          )
-        }
-      }
-    },
-    confirmButton = {
-      TextButton(
-        enabled = !isInvalid,
-        onClick = {
-          if (parsedInt != null && parsedInt in 1..300) {
-            onConfirm(parsedInt)
+
+          if (isTooHigh || isTooLow) {
+            val errorMsg = if (isTooHigh) "Duration exceeds 300 min. Please reduce the number." else "Duration must be at least 1 min."
+            Text(
+              text = errorMsg,
+              style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 12.sp),
+              color = Color(0xFFD93838)
+            )
           }
         }
-      ) {
-        Text(
-          text = "Save",
-          fontWeight = FontWeight.Bold,
-          color = if (isInvalid) mutedColor.copy(alpha = 0.5f) else if (isNightMode) SignatureNeonLime else DarkButtonCharcoal
-        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(12.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Button(
+            onClick = onDismiss,
+            modifier = Modifier
+              .weight(1f)
+              .height(52.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = Color(0xFFEEF1F5),
+              contentColor = Color(0xFF1A1A1F)
+            )
+          ) {
+            Text(
+              text = "Cancel",
+              fontWeight = FontWeight.W600
+            )
+          }
+          Button(
+            enabled = !isInvalid,
+            onClick = {
+              if (parsedInt != null && parsedInt in 1..300) {
+                onConfirm(parsedInt)
+              }
+            },
+            modifier = Modifier
+              .weight(1f)
+              .height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+              containerColor = Color(0xFF1A1A1F),
+              contentColor = Color.White
+            ),
+            shape = CircleShape
+          ) {
+            Text(
+              text = "Save",
+              fontWeight = FontWeight.W600
+            )
+          }
+        }
       }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text("Cancel", color = mutedColor)
-      }
-    },
-    containerColor = cardBg,
-    shape = RoundedCornerShape(18.dp)
-  )
+    }
+  }
 }
 
 /**
@@ -964,26 +1432,33 @@ private fun SessionStartedOverlay(
   isNightMode: Boolean,
   onDismiss: () -> Unit
 ) {
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-  val containerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  val cardBg = Color.White
+  val textColor = Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
+  val containerColor = Color(0xFFF6F8FA)
+  val borderColor = Color(0xFFE3E9F0)
 
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.Black.copy(alpha = 0.5f))
+      .background(Color(0x73141A26))
       .clickable(onClick = onDismiss),
     contentAlignment = Alignment.Center
   ) {
     Surface(
       modifier = Modifier
         .padding(horizontal = 28.dp)
-        .fillMaxWidth(),
-      shape = RoundedCornerShape(20.dp),
-      color = cardBg,
-      border = BorderStroke(1.dp, borderColor)
+        .fillMaxWidth()
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
+        )
+        .clickable(enabled = false) {},
+      shape = RoundedCornerShape(24.dp),
+      color = Color.White,
+      shadowElevation = 0.dp
     ) {
       Column(
         modifier = Modifier.padding(24.dp),
@@ -999,7 +1474,7 @@ private fun SessionStartedOverlay(
           Icon(
             imageVector = Icons.Outlined.CheckCircle,
             contentDescription = null,
-            tint = SignatureNeonLime,
+            tint = if (isNightMode) Color.White else Color(0xFF1A1A1F),
             modifier = Modifier.size(26.dp)
           )
         }
@@ -1010,7 +1485,7 @@ private fun SessionStartedOverlay(
           text = "Session Configured",
           style = MaterialTheme.typography.titleLarge.copy(
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
+            fontSize = 20.sp
           ),
           color = textColor
         )
@@ -1019,27 +1494,27 @@ private fun SessionStartedOverlay(
 
         Text(
           text = "Ready to stay locked in for $durationMinutes minutes.",
-          style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+          style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
           color = mutedColor,
           textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
           onClick = onDismiss,
           modifier = Modifier
             .fillMaxWidth()
-            .height(46.dp),
-          shape = RoundedCornerShape(12.dp),
+            .height(52.dp),
+          shape = CircleShape,
           colors = ButtonDefaults.buttonColors(
-            containerColor = if (isNightMode) Color.White else DarkButtonCharcoal,
-            contentColor = if (isNightMode) Color.Black else Color.White
+            containerColor = Color(0xFF1A1A1F),
+            contentColor = Color.White
           )
         ) {
           Text(
             text = "Back to Home",
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
           )
         }
       }
@@ -1060,7 +1535,7 @@ private fun DurationPill(
 ) {
   val surfaceColor by animateColorAsState(
     targetValue = if (isSelected) {
-      if (isNightMode) SignatureNeonLime else DarkButtonCharcoal
+      if (isNightMode) Color.White else DarkButtonCharcoal
     } else {
       if (isNightMode) DarkContainerNeutral else LightContainerNeutral
     },
@@ -1069,7 +1544,7 @@ private fun DurationPill(
 
   val textColor by animateColorAsState(
     targetValue = if (isSelected) {
-      if (isNightMode) DarkTextOnLime else Color.White
+      if (isNightMode) Color.Black else Color.White
     } else {
       if (isNightMode) DarkTextSecondary else LightTextPrimary
     },
@@ -1091,7 +1566,7 @@ private fun DurationPill(
       .clip(RoundedCornerShape(10.dp))
       .background(surfaceColor)
       .border(1.dp, borderColor, RoundedCornerShape(10.dp))
-      .clickable(onClick = onClick)
+      .pressScale(onClick = onClick)
       .testTag("duration_pill_$label"),
     contentAlignment = Alignment.Center
   ) {
@@ -1115,24 +1590,20 @@ private fun PrimaryActionButton(
   durationMinutes: Int,
   isNightMode: Boolean
 ) {
-  val btnBg = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal
-  val contentColor = if (isNightMode) DarkTextOnLime else Color.White
+  val btnBg = if (isNightMode) Color.White else DarkButtonCharcoal
+  val contentColor = if (isNightMode) Color.Black else Color.White
 
-  Button(
-    onClick = onClick,
+  Box(
     modifier = Modifier
       .fillMaxWidth()
       .height(52.dp)
+      .background(btnBg, RoundedCornerShape(14.dp))
+      .pressScale(onClick = onClick)
       .testTag("start_focus_button"),
-    shape = RoundedCornerShape(14.dp),
-    colors = ButtonDefaults.buttonColors(
-      containerColor = btnBg,
-      contentColor = contentColor
-    ),
-    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+    contentAlignment = Alignment.Center
   ) {
     Row(
-      modifier = Modifier.fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1163,15 +1634,21 @@ private fun DailySnapshotSection(
   todayFocusFormatted: String,
   sessionsCount: Int,
   selectedDurationMinutes: Int,
-  isNightMode: Boolean
+  isNightMode: Boolean,
+  onNavigateToHistory: () -> Unit = {}
 ) {
   val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
   val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
   val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
   val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
+  val arrowBg = if (isNightMode) DarkButtonCharcoal else LightContainerInner
+  val arrowTint = if (isNightMode) DarkTextOffWhite else LightTextPrimary
 
   Surface(
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier
+      .fillMaxWidth()
+      .pressScale(onClick = onNavigateToHistory)
+      .testTag("todays_focus_card"),
     shape = RoundedCornerShape(16.dp),
     color = surfaceColor,
     border = BorderStroke(1.dp, borderColor)
@@ -1262,26 +1739,18 @@ private fun DailySnapshotSection(
         }
       }
 
-      // Goal metric as clean, normal text
-      Column(
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.Center
+      // Arrow mark on the right side - styled like action arrow
+      Box(
+        modifier = Modifier
+          .size(36.dp)
+          .background(arrowBg, CircleShape),
+        contentAlignment = Alignment.Center
       ) {
-        Text(
-          text = todayFocusFormatted,
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.5.sp
-          ),
-          color = textColor
-        )
-        Text(
-          text = "goal",
-          style = MaterialTheme.typography.labelSmall.copy(
-            fontWeight = FontWeight.Medium,
-            fontSize = 11.sp
-          ),
-          color = mutedColor
+        Icon(
+          imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+          contentDescription = "View History",
+          tint = arrowTint,
+          modifier = Modifier.size(18.dp)
         )
       }
     }
@@ -1430,143 +1899,168 @@ private fun FocusPermissionDialog(
   onGrantOverlayPermission: () -> Unit,
   onDismiss: () -> Unit
 ) {
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
-  val containerColor = if (isNightMode) DarkContainerNeutral else LightContainerNeutral
-  val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
+  val cardBg = Color.White
+  val textColor = Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
+  val containerColor = if (isNightMode) Color(0xFFF6F8FA) else Color(0xFFF6F8FA)
+  val borderColor = Color(0xFFE3E9F0)
 
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    containerColor = cardBg,
-    titleContentColor = textColor,
-    textContentColor = textColor,
-    shape = RoundedCornerShape(20.dp),
-    title = {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        Icon(
-          imageVector = Icons.Outlined.Lock,
-          contentDescription = null,
-          tint = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-          modifier = Modifier.size(20.dp)
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0x73141A26))
+      .clickable(onClick = onDismiss),
+    contentAlignment = Alignment.Center
+  ) {
+    Surface(
+      modifier = Modifier
+        .padding(horizontal = 24.dp)
+        .fillMaxWidth()
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
         )
+        .clickable(enabled = false) {},
+      shape = RoundedCornerShape(24.dp),
+      color = cardBg,
+      shadowElevation = 0.dp
+    ) {
+      Column(modifier = Modifier.padding(28.dp)) {
         Text(
-          text = "App Blocker Permission",
+          text = "Permissions Required",
           style = MaterialTheme.typography.titleMedium.copy(
             fontWeight = FontWeight.Bold,
-            fontSize = 17.sp
-          )
+            fontSize = 20.sp
+          ),
+          color = textColor
         )
-      }
-    },
-    text = {
-      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-          text = "To block distracting apps during focus sessions, Lock In needs permissions to monitor foreground apps.",
-          style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+          text = "Lock In needs these to block apps.",
+          style = MaterialTheme.typography.bodyMedium.copy(
+            fontSize = 15.sp,
+            fontWeight = FontWeight.W400
+          ),
           color = mutedColor
         )
-        if (!hasUsagePermission) {
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = containerColor,
-            border = BorderStroke(1.dp, borderColor),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-              Text(
-                text = "1. Usage Access Permission",
-                style = MaterialTheme.typography.titleSmall.copy(
-                  fontWeight = FontWeight.SemiBold,
-                  fontSize = 13.5.sp
-                ),
-                color = textColor
-              )
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(
-                text = "Detects when blocked apps are opened while timer is active.",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                color = mutedColor
-              )
-              Spacer(modifier = Modifier.height(8.dp))
-              Button(
-                onClick = onGrantUsagePermission,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                  containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                  contentColor = if (isNightMode) DarkTextOnLime else Color.White
-                ),
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .height(38.dp)
-              ) {
-                Text("Grant Usage Access", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          if (!hasUsagePermission) {
+            Surface(
+              shape = RoundedCornerShape(14.dp),
+              color = Color(0xFFF6F8FA),
+              border = BorderStroke(1.dp, borderColor),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                  text = "1. Usage Access Permission",
+                  style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.5.sp
+                  ),
+                  color = textColor
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                  text = "Detects when blocked apps are opened while timer is active.",
+                  style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                  color = mutedColor
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                  onClick = onGrantUsagePermission,
+                  shape = CircleShape,
+                  colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1A1A1F),
+                    contentColor = Color.White
+                  ),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp)
+                ) {
+                  Text("Grant Usage Access", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                }
+              }
+            }
+          }
+          if (!hasOverlayPermission) {
+            Surface(
+              shape = RoundedCornerShape(14.dp),
+              color = Color(0xFFF6F8FA),
+              border = BorderStroke(1.dp, borderColor),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                  text = "2. Display Over Other Apps",
+                  style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.5.sp
+                  ),
+                  color = textColor
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                  text = "Shows the Lock In shield over restricted apps.",
+                  style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                  color = mutedColor
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                  onClick = onGrantOverlayPermission,
+                  shape = CircleShape,
+                  colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1A1A1F),
+                    contentColor = Color.White
+                  ),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp)
+                ) {
+                  Text("Grant Display Over Apps", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                }
               }
             }
           }
         }
-        if (!hasOverlayPermission) {
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = containerColor,
-            border = BorderStroke(1.dp, borderColor),
-            modifier = Modifier.fillMaxWidth()
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.End
+        ) {
+          Button(
+            onClick = onDismiss,
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(52.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = Color(0xFFEEF1F5),
+              contentColor = Color(0xFF1A1A1F)
+            )
           ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-              Text(
-                text = "2. Display Over Other Apps",
-                style = MaterialTheme.typography.titleSmall.copy(
-                  fontWeight = FontWeight.SemiBold,
-                  fontSize = 13.5.sp
-                ),
-                color = textColor
-              )
-              Spacer(modifier = Modifier.height(2.dp))
-              Text(
-                text = "Shows the Lock In shield over restricted apps.",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                color = mutedColor
-              )
-              Spacer(modifier = Modifier.height(8.dp))
-              Button(
-                onClick = onGrantOverlayPermission,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                  containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                  contentColor = if (isNightMode) DarkTextOnLime else Color.White
-                ),
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .height(38.dp)
-              ) {
-                Text("Grant Display Over Apps", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-              }
-            }
+            Text("Cancel", fontWeight = FontWeight.W600, fontSize = 16.sp)
           }
         }
-      }
-    },
-    confirmButton = {},
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text("Cancel", color = mutedColor)
       }
     }
-  )
+  }
 }
 
 /**
- * Compact Daily Goal Section on the Home Page
+ * Compact Premium Upgrade Card on the Home Page
  */
 @Composable
-private fun HomeDailyGoalSection(
-  goal: DailyGoal?,
+private fun PremiumUpgradeCard(
   isNightMode: Boolean,
-  onOpenSetupDialog: () -> Unit,
-  onEditName: () -> Unit
+  onClick: () -> Unit
 ) {
   val surfaceColor = if (isNightMode) DarkCardSurface else LightCardSurface
   val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
@@ -1577,747 +2071,221 @@ private fun HomeDailyGoalSection(
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(16.dp))
-      .testTag("home_daily_goal_card"),
+      .clickable { onClick() }
+      .testTag("premium_upgrade_card"),
     shape = RoundedCornerShape(16.dp),
     color = surfaceColor,
     border = BorderStroke(1.dp, borderColor)
   ) {
-    if (goal == null) {
-      Row(
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Column(
         modifier = Modifier
-          .fillMaxWidth()
-          .clickable { onOpenSetupDialog() }
-          .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+          .weight(1f)
+          .padding(end = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
       ) {
-        Column(
-          modifier = Modifier.weight(1f),
-          verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-          Text(
-            text = "Set Daily Goal",
-            style = MaterialTheme.typography.titleMedium.copy(
-              fontWeight = FontWeight.SemiBold,
-              fontSize = 15.5.sp
-            ),
-            color = textColor
-          )
-          Text(
-            text = "Choose a goal and stay consistent.",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-            color = mutedColor
-          )
-        }
-
-        Surface(
-          shape = RoundedCornerShape(20.dp),
-          color = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal
-        ) {
-          Text(
-            text = "+ Set Goal",
-            style = MaterialTheme.typography.labelMedium.copy(
-              fontWeight = FontWeight.Bold,
-              fontSize = 12.sp
-            ),
-            color = if (isNightMode) DarkButtonCharcoal else Color.White,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-          )
-        }
+        Text(
+          text = "Upgrade to Premium",
+          style = MaterialTheme.typography.titleMedium.copy(
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.5.sp
+          ),
+          color = textColor
+        )
+        Text(
+          text = "Unlock more features and take your focus further.",
+          style = MaterialTheme.typography.bodySmall.copy(
+            fontSize = 12.5.sp,
+            lineHeight = 16.sp
+          ),
+          color = mutedColor
+        )
       }
-    } else {
-      val currentDay = goal.getCurrentDay()
-      val totalDays = goal.totalDays
-      val remainingDays = goal.getRemainingDays()
 
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+      Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (isNightMode) Color.White else DarkButtonCharcoal
       ) {
-        Column(
-          modifier = Modifier.weight(1f),
-          verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.clickable { onEditName() }
-          ) {
-            Text(
-              text = goal.title,
-              style = MaterialTheme.typography.titleMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.5.sp
-              ),
-              color = textColor
-            )
-            Icon(
-              imageVector = Icons.Outlined.Edit,
-              contentDescription = "Edit Name",
-              tint = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-              modifier = Modifier.size(14.dp)
-            )
-          }
-          Text(
-            text = "Day $currentDay of $totalDays • $remainingDays days left",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-            color = mutedColor
-          )
-        }
-
-        Surface(
-          shape = RoundedCornerShape(20.dp),
-          color = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-          modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .clickable { onOpenSetupDialog() }
-            .testTag("show_daily_goal_btn")
-        ) {
-          Text(
-            text = "Show",
-            style = MaterialTheme.typography.labelMedium.copy(
-              fontWeight = FontWeight.Bold,
-              fontSize = 12.5.sp
-            ),
-            color = if (isNightMode) DarkButtonCharcoal else Color.White,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-          )
-        }
+        Text(
+          text = "Upgrade →",
+          style = MaterialTheme.typography.labelMedium.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp
+          ),
+          color = if (isNightMode) Color.Black else Color.White,
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
       }
     }
   }
 }
 
 /**
- * Dialog for setting or managing the Daily Goal directly on Home Page
+ * Premium Upgrade Popup Dialog
  */
 @Composable
-private fun DailyGoalDialog(
-  goal: DailyGoal?,
+private fun PremiumUpgradePopup(
   isNightMode: Boolean,
-  onDismiss: () -> Unit,
-  onCreateGoalWithDetails: (String, Int, String?) -> Unit,
-  onUpdateGoalTitle: (String) -> Unit,
-  onUpdateGoalDuration: (Int, String?) -> Unit,
-  onResetGoal: () -> Unit,
-  startWithEditName: Boolean = false
+  onDismiss: () -> Unit
 ) {
-  val context = LocalContext.current
-  val cardBg = if (isNightMode) DarkCardSurface else LightCardSurface
-  val textColor = if (isNightMode) DarkTextOffWhite else LightTextPrimary
+  val surfaceBg = if (isNightMode) DarkCardSurface else Color.White
+  val textColor = if (isNightMode) Color.White else Color(0xFF1A1A1F)
   val mutedColor = if (isNightMode) DarkTextSecondary else LightTextSecondary
   val borderColor = if (isNightMode) DarkSubtleBorder else LightSubtleBorder
-  val optionBg = if (isNightMode) Color(0xFF1E2024) else LightContainerInner
 
-  // Setup Flow state (when goal == null)
-  var setupStep by remember { mutableIntStateOf(1) } // 1: Goal Name, 2: Duration Presets, 3: Custom Days Input
-  var goalTitleInput by remember { mutableStateOf("") }
-  var selectedDays by remember { mutableIntStateOf(30) }
-  var selectedLabel by remember { mutableStateOf("1 Month") }
-  var customDaysInput by remember { mutableStateOf("") }
-
-  // Separate dialog states for editing an existing goal (when goal != null)
-  var showEditTitleDialog by remember { mutableStateOf(startWithEditName) }
-  var editedTitleInput by remember(goal?.title) { mutableStateOf(goal?.title ?: "") }
-
-  // State for change goal confirmation popup
-  var showChangeConfirmation by remember { mutableStateOf(false) }
-
-  val presets = listOf(
-    Triple("1 Week", 7, "7 days"),
-    Triple("2 Weeks", 14, "14 days"),
-    Triple("1 Month", 30, "30 days"),
-    Triple("2 Months", 60, "60 days"),
-    Triple("3 Months", 90, "90 days"),
-    Triple("6 Months", 180, "180 days"),
-    Triple("1 Year", 365, "365 days")
-  )
-
-  // -------------------------------------------------------------
-  // CHANGE GOAL CONFIRMATION POPUP
-  // -------------------------------------------------------------
-  if (showChangeConfirmation) {
-    AlertDialog(
-      onDismissRequest = { showChangeConfirmation = false },
-      containerColor = cardBg,
-      titleContentColor = textColor,
-      textContentColor = textColor,
-      shape = RoundedCornerShape(20.dp),
-      title = {
-        Text(
-          text = "Remove goal?",
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-          )
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Color(0x73141A26))
+      .clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = onDismiss
+      ),
+    contentAlignment = Alignment.Center
+  ) {
+    Surface(
+      modifier = Modifier
+        .padding(horizontal = 28.dp)
+        .fillMaxWidth()
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
         )
-      },
-      text = {
-        Text(
-          text = "Are you sure you want to remove your current goal? This cannot be undone.",
-          style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-          color = mutedColor
-        )
-      },
-      confirmButton = {
-        Button(
-          onClick = {
-            showChangeConfirmation = false
-            onResetGoal()
-            setupStep = 1
-            goalTitleInput = ""
-          },
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFE57373),
-            contentColor = Color.White
-          ),
-          shape = RoundedCornerShape(10.dp)
-        ) {
-          Text("Remove", fontWeight = FontWeight.Bold)
-        }
-      },
-      dismissButton = {
-        TextButton(
-          onClick = {
-            showChangeConfirmation = false
-            Toast.makeText(context, "Goal kept unchanged. Undo", Toast.LENGTH_SHORT).show()
-          }
-        ) {
-          Text("No", color = textColor, fontWeight = FontWeight.SemiBold)
-        }
-      }
-    )
-  }
-
-  // -------------------------------------------------------------
-  // SEPARATE EDIT GOAL NAME POPUP
-  // -------------------------------------------------------------
-  if (showEditTitleDialog && goal != null) {
-    AlertDialog(
-      onDismissRequest = { 
-        if (startWithEditName) onDismiss() else showEditTitleDialog = false 
-      },
-      containerColor = cardBg,
-      titleContentColor = textColor,
-      textContentColor = textColor,
-      shape = RoundedCornerShape(20.dp),
-      title = {
-        Text(
-          text = "Edit Goal Name",
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-          )
-        )
-      },
-      text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text(
-            text = "Enter a new goal name below:",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-            color = mutedColor
-          )
-          OutlinedTextField(
-            value = editedTitleInput,
-            onValueChange = { editedTitleInput = it },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-              .fillMaxWidth()
-              .testTag("edit_goal_name_input"),
-            colors = OutlinedTextFieldDefaults.colors(
-              focusedBorderColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-              unfocusedBorderColor = borderColor,
-              focusedContainerColor = optionBg,
-              unfocusedContainerColor = optionBg,
-              focusedTextColor = textColor,
-              unfocusedTextColor = textColor
-            )
-          )
-        }
-      },
-      confirmButton = {
-        Button(
-          onClick = {
-            if (editedTitleInput.isNotBlank()) {
-              onUpdateGoalTitle(editedTitleInput.trim())
-              showEditTitleDialog = false
-              Toast.makeText(context, "Goal name updated", Toast.LENGTH_SHORT).show()
-            }
-          },
-          enabled = editedTitleInput.isNotBlank(),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-            contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-          ),
-          shape = RoundedCornerShape(10.dp)
-        ) {
-          Text("Save", fontWeight = FontWeight.Bold)
-        }
-      },
-      dismissButton = {
-        TextButton(onClick = { 
-          if (startWithEditName) onDismiss() else showEditTitleDialog = false 
-        }) {
-          Text("Cancel", color = mutedColor)
-        }
-      }
-    )
-  }
-
-  // -------------------------------------------------------------
-  // MAIN DIALOG (SETUP POPUP 1 OR SETUP POPUP 2 OR PROGRESS POPUP)
-  // -------------------------------------------------------------
-  if (!startWithEditName || !showEditTitleDialog) {
-    AlertDialog(
-      onDismissRequest = onDismiss,
-    containerColor = cardBg,
-    titleContentColor = textColor,
-    textContentColor = textColor,
-    shape = RoundedCornerShape(20.dp),
-    title = {
-      if (goal == null) {
-        val titleText = when (setupStep) {
-          1 -> "What is your goal?"
-          2 -> "How long do you want to Lock In?"
-          else -> "Enter custom days"
-        }
-        Text(
-          text = titleText,
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-          )
-        )
-      } else {
-        Text(
-          text = goal.title,
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-          ),
-          modifier = Modifier.fillMaxWidth(),
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-      }
-    },
-    text = {
+        .clickable(enabled = false) {},
+      shape = RoundedCornerShape(24.dp),
+      color = surfaceBg,
+      border = if (isNightMode) BorderStroke(1.dp, borderColor) else null,
+      shadowElevation = 0.dp
+    ) {
       Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-          .fillMaxWidth()
-          .verticalScroll(rememberScrollState())
+        modifier = Modifier.padding(28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        if (goal == null) {
-          if (setupStep == 1) {
-            // =========================================================
-            // SETUP POPUP 1 — Goal Name ONLY
-            // =========================================================
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-              Text(
-                text = "Write your goal below to get started.",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-                color = mutedColor
-              )
+        // Icon / Visual Element
+        Box(
+          modifier = Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(if (isNightMode) Color(0xFF282B33) else Color(0xFFF6F8FA)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = Icons.Outlined.Lock,
+            contentDescription = null,
+            tint = textColor,
+            modifier = Modifier.size(24.dp)
+          )
+        }
 
-              OutlinedTextField(
-                value = goalTitleInput,
-                onValueChange = { goalTitleInput = it },
-                placeholder = {
-                  Text(
-                    "Goal name",
-                    color = mutedColor.copy(alpha = 0.7f),
-                    fontSize = 13.5.sp
-                  )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .testTag("goal_title_input"),
-                colors = OutlinedTextFieldDefaults.colors(
-                  focusedBorderColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                  unfocusedBorderColor = borderColor,
-                  focusedContainerColor = optionBg,
-                  unfocusedContainerColor = optionBg,
-                  focusedTextColor = textColor,
-                  unfocusedTextColor = textColor
-                )
-              )
-            }
-          } else if (setupStep == 2) {
-            // =========================================================
-            // SETUP POPUP 2 — Duration Presets ONLY
-            // =========================================================
-            Column(
-              verticalArrangement = Arrangement.spacedBy(8.dp),
-              modifier = Modifier.fillMaxWidth()
-            ) {
-              Text(
-                text = "Goal: \"${goalTitleInput.ifBlank { "Daily Goal" }}\"",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                  fontWeight = FontWeight.SemiBold,
-                  fontSize = 14.sp
-                ),
-                color = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                modifier = Modifier.padding(bottom = 4.dp)
-              )
+        Spacer(modifier = Modifier.height(18.dp))
 
-              presets.forEach { (label, days, subtext) ->
-                val isSelected = selectedDays == days
-                Surface(
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable {
-                      selectedDays = days
-                      selectedLabel = label
-                    },
-                  color = if (isSelected) (if (isNightMode) SignatureNeonLime.copy(alpha = 0.15f) else DarkButtonCharcoal.copy(alpha = 0.1f)) else optionBg,
-                  border = BorderStroke(
-                    1.dp,
-                    if (isSelected) (if (isNightMode) SignatureNeonLime else DarkButtonCharcoal) else Color.Transparent
-                  ),
-                  shape = RoundedCornerShape(12.dp)
-                ) {
-                  Row(
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .height(56.dp)
-                      .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                  ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                      Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                          fontWeight = FontWeight.Bold,
-                          fontSize = 15.sp
-                        ),
-                        color = textColor
-                      )
-                      Text(
-                        text = subtext,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                        color = mutedColor
-                      )
-                    }
-                    if (isSelected) {
-                      Icon(
-                        imageVector = Icons.Outlined.CheckCircle,
-                        contentDescription = null,
-                        tint = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                        modifier = Modifier.size(20.dp)
-                      )
-                    }
-                  }
-                }
-              }
+        Text(
+          text = "Unlock Premium",
+          style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp
+          ),
+          color = textColor,
+          textAlign = TextAlign.Center
+        )
 
-              Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-              Surface(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .clip(RoundedCornerShape(12.dp))
-                  .clickable {
-                    setupStep = 3
-                  },
-                color = optionBg,
-                border = BorderStroke(1.dp, Color.Transparent),
-                shape = RoundedCornerShape(12.dp)
-              ) {
-                Row(
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(
-                    text = "Custom Days",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                      fontWeight = FontWeight.Bold,
-                      fontSize = 15.sp
-                    ),
-                    color = textColor
-                  )
-                  Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = mutedColor,
-                    modifier = Modifier.size(20.dp)
-                  )
-                }
-              }
-            }
-          } else {
-            // =========================================================
-            // SETUP POPUP 3 — Enter custom days
-            // =========================================================
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-              Text(
-                text = "Enter the number of days for your goal (7 - 365).",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
-                color = mutedColor
-              )
+        Text(
+          text = "Get more powerful tools to stay focused.",
+          style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+          color = mutedColor,
+          textAlign = TextAlign.Center
+        )
 
-              OutlinedTextField(
-                value = customDaysInput,
-                onValueChange = { input ->
-                  if (input.all { it.isDigit() } && input.length <= 4) {
-                    customDaysInput = input
-                  }
-                },
-                placeholder = { Text("e.g., 60", fontSize = 13.sp, color = mutedColor.copy(alpha = 0.7f)) },
-                trailingIcon = {
-                  Text(
-                    text = "days",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                    color = mutedColor,
-                    modifier = Modifier.padding(end = 12.dp)
-                  )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                  focusedBorderColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                  unfocusedBorderColor = borderColor,
-                  focusedContainerColor = optionBg,
-                  unfocusedContainerColor = optionBg,
-                  focusedTextColor = textColor,
-                  unfocusedTextColor = textColor
-                )
-              )
+        Spacer(modifier = Modifier.height(24.dp))
 
-              val customDaysVal = customDaysInput.toIntOrNull()
-              if (customDaysVal != null) {
-                if (customDaysVal < 7) {
-                  Text(
-                    text = "Minimum duration is 7 days",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.error
-                  )
-                } else if (customDaysVal > 365) {
-                  Text(
-                    text = "Maximum duration is 365 days",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.error
-                  )
-                }
-              }
-            }
-          }
-        } else {
-          // =========================================================
-          // PROGRESS POPUP (When user taps "Show" on Home page)
-          // =========================================================
-          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val currentDay = goal.getCurrentDay()
-            val totalDays = goal.totalDays
-            val remainingDays = goal.getRemainingDays()
-            val isCompleted = goal.isCompleted()
+        // Features List
+        val features = listOf(
+          "Advanced Stats",
+          "Focus Profiles",
+          "Focus Schedules",
+          "Premium Themes",
+          "More customization"
+        )
 
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+          features.forEach { feature ->
             Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+              Icon(
+                imageVector = Icons.Outlined.CheckCircle,
+                contentDescription = null,
+                tint = if (isNightMode) Color.White.copy(alpha = 0.7f) else Color(0xFF1A1A1F).copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp)
+              )
               Text(
-                text = if (isCompleted) "Day $totalDays of $totalDays" else "Day $currentDay of $totalDays",
-                style = MaterialTheme.typography.titleSmall.copy(
-                  fontWeight = FontWeight.Bold,
-                  fontSize = 14.sp
+                text = feature,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                  fontWeight = FontWeight.Medium,
+                  fontSize = 15.sp
                 ),
                 color = textColor
               )
-              Text(
-                text = if (isCompleted) "Goal Complete" else "$remainingDays days left",
-                style = MaterialTheme.typography.bodySmall.copy(
-                  fontWeight = FontWeight.SemiBold,
-                  fontSize = 13.sp,
-                  color = if (isCompleted) SignatureNeonLime else mutedColor
-                )
-              )
             }
+          }
+        }
 
-            DailyGoalDotGrid(
-              totalDays = totalDays,
-              currentDay = currentDay,
-              isCompleted = isCompleted,
-              isNightMode = isNightMode,
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp)
-            )
-          }
-        }
-      }
-    },
-    confirmButton = {
-      if (goal == null) {
-        when (setupStep) {
-          1 -> {
-            Button(
-              onClick = { setupStep = 2 },
-              enabled = goalTitleInput.isNotBlank(),
-              colors = ButtonDefaults.buttonColors(
-                containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-              ),
-              shape = RoundedCornerShape(10.dp)
-            ) {
-              Text("Continue", fontWeight = FontWeight.Bold)
-            }
-          }
-          2 -> {
-            Button(
-              onClick = {
-                onCreateGoalWithDetails(goalTitleInput.trim(), selectedDays, selectedLabel)
-              },
-              colors = ButtonDefaults.buttonColors(
-                containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-              ),
-              shape = RoundedCornerShape(10.dp)
-            ) {
-              Text("Lock In Goal", fontWeight = FontWeight.Bold)
-            }
-          }
-          else -> {
-            val days = customDaysInput.toIntOrNull() ?: 0
-            val isValid = days in 7..365
-            Button(
-              onClick = {
-                onCreateGoalWithDetails(goalTitleInput.trim(), days, "$days Days")
-              },
-              enabled = isValid,
-              colors = ButtonDefaults.buttonColors(
-                containerColor = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                contentColor = if (isNightMode) DarkButtonCharcoal else Color.White
-              ),
-              shape = RoundedCornerShape(10.dp)
-            ) {
-              Text("Confirm", fontWeight = FontWeight.Bold)
-            }
-          }
-        }
-      } else {
-        Column(
-          modifier = Modifier.fillMaxWidth(),
-          verticalArrangement = Arrangement.spacedBy(2.dp)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Buttons
+        Button(
+          onClick = { /* Upgrade logic placeholder */ },
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+          shape = CircleShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = if (isNightMode) Color.White else Color(0xFF1A1A1F),
+            contentColor = if (isNightMode) Color.Black else Color.White
+          )
         ) {
-          // Start/End Dates moved here to reduce gap with buttons
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = "Start: ${goal.startDateStr}",
-              style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-              color = mutedColor
-            )
-            Text(
-              text = "End: ${goal.endDateStr}",
-              style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-              color = mutedColor
-            )
-          }
-
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(bottom = 0.dp, start = 4.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-          // Home screen widget button
-          TextButton(
-            onClick = {
-              val pinned = DailyGoalWidgetProvider.requestPinAppWidget(context)
-              if (pinned) {
-                Toast.makeText(context, "Adding widget to Home screen...", Toast.LENGTH_SHORT).show()
-              } else {
-                Toast.makeText(context, "To add widget: Long-press your home screen, tap Widgets, and choose Lock In™ Daily Goal.", Toast.LENGTH_LONG).show()
-              }
-            }
-          ) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-              Icon(
-                imageVector = Icons.Outlined.AddBox,
-                contentDescription = null,
-                tint = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal,
-                modifier = Modifier.size(16.dp)
-              )
-              Text(
-                text = "Home screen",
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
-                color = if (isNightMode) SignatureNeonLime else DarkButtonCharcoal
-              )
-            }
-          }
-
-          TextButton(onClick = onDismiss) {
-            Text(
-              text = "Close",
-              color = mutedColor,
-              style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            )
-          }
-
-          TextButton(
-            onClick = { showChangeConfirmation = true },
-            modifier = Modifier.testTag("remove_goal_btn")
-          ) {
-            Text(
-              text = "Remove",
-              color = if (isNightMode) Color(0xFFE57373) else Color(0xFFD32F2F),
+          Text(
+            text = "Upgrade to Premium",
+            style = MaterialTheme.typography.labelLarge.copy(
               fontWeight = FontWeight.Bold,
-              style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp)
+              fontSize = 16.sp
             )
-          }
-          }
+          )
         }
-      }
-    },
-    dismissButton = {
-      if (goal == null) {
-        when (setupStep) {
-          2 -> {
-            TextButton(onClick = { setupStep = 1 }) {
-              Text("Back", color = mutedColor)
-            }
-          }
-          3 -> {
-            TextButton(onClick = { setupStep = 2 }) {
-              Text("Back", color = mutedColor)
-            }
-          }
-          else -> {
-            TextButton(onClick = onDismiss) {
-              Text("Cancel", color = mutedColor)
-            }
-          }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(
+          onClick = onDismiss,
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+        ) {
+          Text(
+            text = "Not now",
+            style = MaterialTheme.typography.labelLarge.copy(
+              fontWeight = FontWeight.SemiBold,
+              fontSize = 15.sp
+            ),
+            color = mutedColor
+          )
         }
-      } else {
-        // Handled in confirmButton for better full-width control
-        null
       }
     }
-    )
   }
 }
+

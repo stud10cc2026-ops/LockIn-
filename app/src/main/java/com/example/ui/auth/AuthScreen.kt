@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
@@ -95,20 +96,20 @@ fun AuthModalOverlay(
   var unverifiedEmail by remember { mutableStateOf("") }
   var verificationMsg by remember { mutableStateOf("") }
 
-  val cardBg = if (isNightMode) DarkCardSurface else CardWhite
-  val textColor = if (isNightMode) Color.White else DarkTextPrimary
-  val mutedColor = if (isNightMode) DarkTextSecondary else MutedTextSecondary
-  val borderColor = if (isNightMode) DarkSubtleBorder else SubtleBorder
-  val inputFocusedBorder = if (isNightMode) SignatureLimeAccent else Color.Black
-  val inputFocusedLabel = if (isNightMode) SignatureLimeAccent else Color.Black
-  val inputTextColor = if (isNightMode) Color.White else Color.Black
-  val inputCursorColor = if (isNightMode) SignatureLimeAccent else Color.Black
-  val inputHandleColor = if (isNightMode) SignatureLimeAccent else Color.Black
+  val cardBg = Color.White
+  val textColor = Color(0xFF1A1A1F)
+  val mutedColor = Color(0xFF8E96A3)
+  val borderColor = Color(0xFFE3E9F0)
+  val inputFocusedBorder = Color(0xFF1A1A1F)
+  val inputFocusedLabel = Color(0xFF1A1A1F)
+  val inputTextColor = Color(0xFF1A1A1F)
+  val inputCursorColor = Color(0xFF1A1A1F)
+  val inputHandleColor = Color(0xFF1A1A1F)
 
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color.Black.copy(alpha = 0.70f))
+      .background(Color(0x73141A26))
       .clickable(enabled = currentMode != "CREATE_PASSWORD") { onDismiss() }
       .imePadding(),
     contentAlignment = Alignment.Center
@@ -117,15 +118,20 @@ fun AuthModalOverlay(
       modifier = Modifier
         .padding(horizontal = 24.dp)
         .fillMaxWidth()
-        .shadow(24.dp, RoundedCornerShape(28.dp))
+        .shadow(
+          elevation = 32.dp,
+          shape = RoundedCornerShape(24.dp),
+          spotColor = Color(0x2E141E32),
+          ambientColor = Color.Transparent
+        )
         .clickable { /* prevent dismissal on dialog click */ }
         .testTag("auth_dialog_surface"),
-      shape = RoundedCornerShape(28.dp),
-      color = cardBg,
-      border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+      shape = RoundedCornerShape(24.dp),
+      color = Color.White,
+      shadowElevation = 0.dp
     ) {
       Column(
-        modifier = Modifier.padding(24.dp),
+        modifier = Modifier.padding(28.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
         // Header Row with Title / Close
@@ -154,14 +160,14 @@ fun AuthModalOverlay(
               modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(if (isNightMode) Color(0xFF2C2F34) else Color(0xFFF2F2F2))
+                .background(Color(0xFFEEF1F5))
                 .clickable { onDismiss() },
               contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Outlined.Close,
                 contentDescription = "Close",
-                tint = mutedColor,
+                tint = Color(0xFF1A1A1F),
                 modifier = Modifier.size(18.dp)
               )
             }
@@ -186,14 +192,14 @@ fun AuthModalOverlay(
           Surface(
             modifier = Modifier
               .fillMaxWidth()
-              .clip(RoundedCornerShape(12.dp)),
-            color = SignatureLimeAccent.copy(alpha = 0.15f),
-            border = androidx.compose.foundation.BorderStroke(1.dp, SignatureLimeAccent)
+              .clip(RoundedCornerShape(14.dp)),
+            color = Color(0xFFDCE5EE),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE3E9F0))
           ) {
             Text(
               text = successMessage!!,
               style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-              color = if (isNightMode) SignatureLimeAccent else SignatureLimeDarkText,
+              color = Color(0xFF1A1A1F),
               modifier = Modifier.padding(12.dp),
               textAlign = TextAlign.Center
             )
@@ -222,16 +228,16 @@ fun AuthModalOverlay(
               )
               if (errorMessage!!.contains("Account already exists", ignoreCase = true) || errorMessage!!.contains("Log In", ignoreCase = true) || errorMessage!!.contains("Sign In", ignoreCase = true)) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(
+                  Button(
                   onClick = {
                     currentMode = "LOGIN"
                     errorMessage = null
                     successMessage = null
                   },
-                  shape = RoundedCornerShape(8.dp),
+                  shape = CircleShape,
                   colors = ButtonDefaults.buttonColors(
-                    containerColor = SignatureLimeAccent,
-                    contentColor = SignatureLimeDarkText
+                    containerColor = Color(0xFF1A1A1F),
+                    contentColor = Color.White
                   ),
                   modifier = Modifier.height(36.dp)
                 ) {
@@ -269,7 +275,7 @@ fun AuthModalOverlay(
               modifier = Modifier
                 .fillMaxWidth()
                 .testTag("auth_reset_email_input"),
-              shape = RoundedCornerShape(16.dp),
+              shape = RoundedCornerShape(14.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = inputFocusedBorder,
                 unfocusedBorderColor = borderColor,
@@ -285,7 +291,7 @@ fun AuthModalOverlay(
               )
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
               enabled = !isSendingReset,
@@ -312,15 +318,15 @@ fun AuthModalOverlay(
                 .fillMaxWidth()
                 .height(52.dp)
                 .testTag("auth_send_reset_button"),
-              shape = RoundedCornerShape(16.dp),
+              shape = CircleShape,
               colors = ButtonDefaults.buttonColors(
-                containerColor = SignatureLimeAccent,
-                contentColor = SignatureLimeDarkText
+                containerColor = Color(0xFF1A1A1F),
+                contentColor = Color.White
               )
             ) {
               Text(
                 text = if (isSendingReset) "Sending..." else "Send Reset Link",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
               )
             }
 
@@ -355,7 +361,7 @@ fun AuthModalOverlay(
               modifier = Modifier
                 .fillMaxWidth()
                 .testTag("auth_name_input"),
-              shape = RoundedCornerShape(16.dp),
+              shape = RoundedCornerShape(14.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = inputFocusedBorder,
                 unfocusedBorderColor = borderColor,
@@ -389,7 +395,7 @@ fun AuthModalOverlay(
               modifier = Modifier
                 .fillMaxWidth()
                 .testTag("auth_email_input"),
-              shape = RoundedCornerShape(16.dp),
+              shape = RoundedCornerShape(14.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = inputFocusedBorder,
                 unfocusedBorderColor = borderColor,
@@ -433,7 +439,7 @@ fun AuthModalOverlay(
               modifier = Modifier
                 .fillMaxWidth()
                 .testTag("auth_password_input"),
-              shape = RoundedCornerShape(16.dp),
+              shape = RoundedCornerShape(14.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = inputFocusedBorder,
                 unfocusedBorderColor = borderColor,
@@ -454,7 +460,7 @@ fun AuthModalOverlay(
               isNightMode = isNightMode
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
               onClick = {
@@ -497,15 +503,15 @@ fun AuthModalOverlay(
                 .fillMaxWidth()
                 .height(52.dp)
                 .testTag("auth_continue_button"),
-              shape = RoundedCornerShape(16.dp),
+              shape = CircleShape,
               colors = ButtonDefaults.buttonColors(
-                containerColor = SignatureLimeAccent,
-                contentColor = SignatureLimeDarkText
+                containerColor = Color(0xFF1A1A1F),
+                contentColor = Color.White
               )
             ) {
               Text(
                 text = "Create Account",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp)
               )
             }
 
@@ -536,29 +542,29 @@ fun AuthModalOverlay(
           "CREATE_PASSWORD" -> {
             if (isPasswordResetSuccess) {
               Spacer(modifier = Modifier.height(8.dp))
-              Button(
-                onClick = {
-                  currentMode = "LOGIN"
-                  errorMessage = null
-                  successMessage = null
-                  isPasswordResetSuccess = false
-                  passwordInput = ""
-                },
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .height(52.dp)
-                  .testTag("auth_login_after_reset_button"),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                  containerColor = SignatureLimeAccent,
-                  contentColor = SignatureLimeDarkText
-                )
-              ) {
-                Text(
-                  text = "Sign In",
-                  style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-              }
+                Button(
+                  onClick = {
+                    currentMode = "LOGIN"
+                    errorMessage = null
+                    successMessage = null
+                    isPasswordResetSuccess = false
+                    passwordInput = ""
+                  },
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .testTag("auth_login_after_reset_button"),
+                  shape = CircleShape,
+                  colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF1A1A1F),
+                    contentColor = Color.White
+                  )
+                ) {
+                  Text(
+                    text = "Sign In",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                  )
+                }
             } else {
               OutlinedTextField(
                 value = passwordInput,
@@ -637,10 +643,10 @@ fun AuthModalOverlay(
                   .fillMaxWidth()
                   .height(52.dp)
                   .testTag("auth_reset_password_button"),
-                shape = RoundedCornerShape(16.dp),
+                shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
-                  containerColor = SignatureLimeAccent,
-                  contentColor = SignatureLimeDarkText
+                  containerColor = Color(0xFF1A1A1F),
+                  contentColor = Color.White
                 )
               ) {
                 Text(
@@ -655,7 +661,7 @@ fun AuthModalOverlay(
             Icon(
               imageVector = Icons.Outlined.Email,
               contentDescription = null,
-              tint = SignatureLimeAccent,
+              tint = Color(0xFF1A1A1F),
               modifier = Modifier.size(48.dp)
             )
 
@@ -690,10 +696,10 @@ fun AuthModalOverlay(
                 .fillMaxWidth()
                 .height(52.dp)
                 .testTag("verify_email_login_button"),
-              shape = RoundedCornerShape(16.dp),
+              shape = CircleShape,
               colors = ButtonDefaults.buttonColors(
-                containerColor = SignatureLimeAccent,
-                contentColor = SignatureLimeDarkText
+                containerColor = Color(0xFF1A1A1F),
+                contentColor = Color.White
               )
             ) {
               Text(
@@ -720,7 +726,7 @@ fun AuthModalOverlay(
               modifier = Modifier
                 .fillMaxWidth()
                 .testTag("auth_email_input"),
-              shape = RoundedCornerShape(16.dp),
+              shape = RoundedCornerShape(14.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = inputFocusedBorder,
                 unfocusedBorderColor = borderColor,
@@ -764,7 +770,7 @@ fun AuthModalOverlay(
               modifier = Modifier
                 .fillMaxWidth()
                 .testTag("auth_password_input"),
-              shape = RoundedCornerShape(16.dp),
+              shape = RoundedCornerShape(14.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = inputFocusedBorder,
                 unfocusedBorderColor = borderColor,
@@ -823,10 +829,10 @@ fun AuthModalOverlay(
                 .fillMaxWidth()
                 .height(52.dp)
                 .testTag("auth_submit_button"),
-              shape = RoundedCornerShape(16.dp),
+              shape = CircleShape,
               colors = ButtonDefaults.buttonColors(
-                containerColor = SignatureLimeAccent,
-                contentColor = SignatureLimeDarkText
+                containerColor = Color(0xFF1A1A1F),
+                contentColor = Color.White
               )
             ) {
               Text(
@@ -873,14 +879,14 @@ fun PasswordRequirementsChecklist(
   val reqLetter = passwordInput.any { it.isLetter() }
   val reqNumber = passwordInput.any { it.isDigit() }
 
-  val activeColor = SignatureLimeAccent
+  val activeColor = Color(0xFF1A1A1F)
   val inactiveColor = if (isNightMode) DarkTextSecondary else MutedTextSecondary
 
   Column(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(top = 6.dp, start = 4.dp, end = 4.dp),
-    verticalArrangement = Arrangement.spacedBy(4.dp)
+      .padding(top = 8.dp, start = 4.dp, end = 4.dp),
+    verticalArrangement = Arrangement.spacedBy(6.dp)
   ) {
     RequirementRow(label = "At least 8 characters", isFulfilled = reqLength, activeColor = activeColor, inactiveColor = inactiveColor)
     RequirementRow(label = "At least 1 letter", isFulfilled = reqLetter, activeColor = activeColor, inactiveColor = inactiveColor)
@@ -900,7 +906,7 @@ private fun RequirementRow(
     horizontalArrangement = Arrangement.spacedBy(8.dp)
   ) {
     Icon(
-      imageVector = if (isFulfilled) Icons.Outlined.Check else Icons.Outlined.RadioButtonUnchecked,
+      imageVector = if (isFulfilled) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
       contentDescription = null,
       tint = if (isFulfilled) activeColor else inactiveColor,
       modifier = Modifier.size(16.dp)

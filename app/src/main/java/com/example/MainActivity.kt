@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.example.data.FirebaseAuthManager().ensureFirebaseInitialized(this)
         handleBlockedAppIntent(intent)
         setContent {
             PushScrollTheme {
@@ -54,6 +55,10 @@ class MainActivity : ComponentActivity() {
         if (intent?.action == "com.example.action.OPEN_DAILY_GOAL" ||
             intent?.getStringExtra("OPEN_TAB") == "DAILY") {
             homeViewModel?.setActiveTab(0)
+            homeViewModel?.setGoalDetailPageOpen(true)
+        }
+        if (intent?.getStringExtra("navigate_to") == "habits") {
+            homeViewModel?.setActiveTab(3)
         }
     }
 

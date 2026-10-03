@@ -77,7 +77,9 @@ class FocusBlockerService : Service() {
     }
 
     // Broadcast change so ViewModel updates
-    val broadcastIntent = Intent(ACTION_SESSION_STATE_CHANGED)
+    val broadcastIntent = Intent(ACTION_SESSION_STATE_CHANGED).apply {
+      setPackage(packageName)
+    }
     applicationContext.sendBroadcast(broadcastIntent)
 
     updateNotification(state.remainingSeconds, newPauseState)
@@ -124,38 +126,19 @@ class FocusBlockerService : Service() {
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
-    val pauseIntent = Intent(this, FocusBlockerService::class.java).apply {
-      action = ACTION_TOGGLE_PAUSE
-    }
-    val pausePendingIntent = PendingIntent.getService(
-      this,
-      1,
-      pauseIntent,
-      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-
     val mins = remainingSeconds / 60
     val secs = remainingSeconds % 60
     val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
 
-    val remoteViews = RemoteViews(packageName, R.layout.notification_lockscreen_session).apply {
-      setTextViewText(R.id.tv_notification_timer, formattedTime)
-      setImageViewResource(
-        R.id.btn_notification_pause,
-        if (isPaused) R.drawable.ic_notification_play_black else R.drawable.ic_notification_pause_black
-      )
-      setOnClickPendingIntent(R.id.btn_notification_pause, pausePendingIntent)
-      setOnClickPendingIntent(R.id.notification_root, contentPendingIntent)
-    }
-
+    val statusText = if (isPaused) "Session paused • $formattedTime remaining" else "Focus session active • $formattedTime remaining"
     val notificationIcon = R.drawable.ic_stat_notification
 
     return NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(notificationIcon)
-      .setCustomContentView(remoteViews)
-      .setCustomBigContentView(remoteViews)
+      .setContentTitle("Lock In")
+      .setContentText(statusText)
       .setOngoing(true)
-      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setPriority(NotificationCompat.PRIORITY_LOW)
       .setCategory(NotificationCompat.CATEGORY_SERVICE)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setContentIntent(contentPendingIntent)
@@ -265,9 +248,10 @@ class FocusBlockerService : Service() {
       val channel = NotificationChannel(
         CHANNEL_ID,
         "Focus Session App Blocker",
-        NotificationManager.IMPORTANCE_HIGH
+        NotificationManager.IMPORTANCE_LOW
       ).apply {
-        description = "Active Focus Session app blocking background service"
+        description = "Active Focus Session background service"
+        setShowBadge(false)
       }
       val manager = getSystemService(NotificationManager::class.java)
       manager?.createNotificationChannel(channel)
